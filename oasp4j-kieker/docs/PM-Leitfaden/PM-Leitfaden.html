@@ -1,0 +1,2279 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Anleitung zum Performance-Monitoring von Java-Anwendungen mit dem Kieker-Framework</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+/*
+@media print {
+body {font-size: 300%;}
+}
+*/
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+/*
+a:visited {
+  color: fuchsia;
+}
+*/
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+.highlight .hll { background-color: #ffffcc }
+.highlight  { background: #f8f8f8; }
+.highlight .c { color: #408080; font-style: italic } /* Comment */
+.highlight .err { border: 1px solid #FF0000 } /* Error */
+.highlight .k { color: #008000; font-weight: bold } /* Keyword */
+.highlight .o { color: #666666 } /* Operator */
+.highlight .cm { color: #408080; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #BC7A00 } /* Comment.Preproc */
+.highlight .c1 { color: #408080; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #408080; font-style: italic } /* Comment.Special */
+.highlight .gd { color: #A00000 } /* Generic.Deleted */
+.highlight .ge { font-style: italic } /* Generic.Emph */
+.highlight .gr { color: #FF0000 } /* Generic.Error */
+.highlight .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #00A000 } /* Generic.Inserted */
+.highlight .go { color: #808080 } /* Generic.Output */
+.highlight .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.highlight .gs { font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.highlight .gt { color: #0040D0 } /* Generic.Traceback */
+.highlight .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #008000 } /* Keyword.Pseudo */
+.highlight .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.highlight .kt { color: #B00040 } /* Keyword.Type */
+.highlight .m { color: #666666 } /* Literal.Number */
+.highlight .s { color: #BA2121 } /* Literal.String */
+.highlight .na { color: #7D9029 } /* Name.Attribute */
+.highlight .nb { color: #008000 } /* Name.Builtin */
+.highlight .nc { color: #0000FF; font-weight: bold } /* Name.Class */
+.highlight .no { color: #880000 } /* Name.Constant */
+.highlight .nd { color: #AA22FF } /* Name.Decorator */
+.highlight .ni { color: #999999; font-weight: bold } /* Name.Entity */
+.highlight .ne { color: #D2413A; font-weight: bold } /* Name.Exception */
+.highlight .nf { color: #0000FF } /* Name.Function */
+.highlight .nl { color: #A0A000 } /* Name.Label */
+.highlight .nn { color: #0000FF; font-weight: bold } /* Name.Namespace */
+.highlight .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.highlight .nv { color: #19177C } /* Name.Variable */
+.highlight .ow { color: #AA22FF; font-weight: bold } /* Operator.Word */
+.highlight .w { color: #bbbbbb } /* Text.Whitespace */
+.highlight .mf { color: #666666 } /* Literal.Number.Float */
+.highlight .mh { color: #666666 } /* Literal.Number.Hex */
+.highlight .mi { color: #666666 } /* Literal.Number.Integer */
+.highlight .mo { color: #666666 } /* Literal.Number.Oct */
+.highlight .sb { color: #BA2121 } /* Literal.String.Backtick */
+.highlight .sc { color: #BA2121 } /* Literal.String.Char */
+.highlight .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.highlight .s2 { color: #BA2121 } /* Literal.String.Double */
+.highlight .se { color: #BB6622; font-weight: bold } /* Literal.String.Escape */
+.highlight .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.highlight .si { color: #BB6688; font-weight: bold } /* Literal.String.Interpol */
+.highlight .sx { color: #008000 } /* Literal.String.Other */
+.highlight .sr { color: #BB6688 } /* Literal.String.Regex */
+.highlight .s1 { color: #BA2121 } /* Literal.String.Single */
+.highlight .ss { color: #19177C } /* Literal.String.Symbol */
+.highlight .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.highlight .vc { color: #19177C } /* Name.Variable.Class */
+.highlight .vg { color: #19177C } /* Name.Variable.Global */
+.highlight .vi { color: #19177C } /* Name.Variable.Instance */
+.highlight .il { color: #666666 } /* Literal.Number.Integer.Long */
+
+
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(2);
+/*]]>*/
+</script>
+</head>
+<body class="article">
+<div id="header">
+<h1>Anleitung zum Performance-Monitoring von Java-Anwendungen mit dem Kieker-Framework</h1>
+<span id="author">Johannes Mensing</span><br />
+<span id="revnumber">version 1.0,</span>
+<span id="revdate">August 2014</span>
+<div id="toc">
+  <div id="toctitle">Inhaltsverzeichnis</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_einleitung">1. Einleitung</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Diese Anleitung ist entstanden, um einfaches Performance-Monitoring in kleinen und mittelgroßen Java-Projekten zu ermöglichen, ohne dabei einen unverhältnismäßig großen Aufwand betreiben zu müssen.
+Um einen genaueren Einblick in Kontext und Motivation dieser Arbeit zu bekommen, sieh Dir bitte die Powerpoint-Präsentation <em>Einfaches Performance-Monitoring von Java-Anwendungen</em> von Thomas Maier an.</p></div>
+<div class="paragraph"><p>Für die Entwicklung dieser Anleitung wurde Kieker-1.9 verwendet. Es ist möglich, dass zukünftige Releases kompatibel sind, dies ist aber nicht garantiert und muss getestet werden.
+Bei allen Fragen bezüglich Kieker ist immer ein Blick in den <a href="http://kieker-monitoring.net/documentation/">Kieker-User-Guide</a> empfehlenswert.</p></div>
+<div class="paragraph"><p>Kieker ist unter der <a href="http://kieker-monitoring.net/license/">Apache License, Version 2.0</a> veröffentlicht und kann dementsprechend verwendet werden.</p></div>
+<div class="sect2">
+<h3 id="_was_diese_anleitung_bietet">1.1. Was diese Anleitung bietet</h3>
+<div class="paragraph"><p>Das hier vorgestellte Verfahren zum Monitoring erlaubt eine kontinuierliche Erfassung von Monitoring-Daten wie Responsetime, Methodensignatur, Thread-ID oder Host-Name. Außerdem werden einige Daten&#8201;&#8212;&#8201;wie etwa User-ID oder Session-ID&#8201;&#8212;&#8201;erfasst, mit denen sich die gewonnenen Informationen in Bezug zu einem fachlichen Kontext setzen lassen. Die Daten werden von Messsonden erfasst&#8201;&#8212;&#8201;sogenannte Monitoring-Probes&#8201;&#8212;&#8201;die normalerweise per Spring-AOP in den Code integriert werden. Alternativ wird
+die Möglichkeit der manuellen Codeinstrumentierung vorgestellt. Die Monitoring-Probes können gezielt an kritischen Punkten platziert werden, doch haben Performance-Messungen gezeigt, dass auch
+großzügige bis vollständige Codeinstrumentierungen kaum messbaren Performance-Overhead produzieren. Zudem sind die Monitoring-Probes auch zur Laufzeit an- und abschaltbar. Die produzierten Daten
+werden als Textdateien im CSV-Format persistiert, die von Tools wie z.B. Excel ausgewertet werden können.</p></div>
+<div class="paragraph"><p>Des Weiteren wird eine Möglichkeit zur Analyse der produzierten Daten unter Verwendung der Kieker-WebGUI aufgezeigt. Hiermit können die Daten beliebig gefiltert und Kennzahlen der Responsetimes&#8201;&#8212;&#8201;Minimum, Maximum, Median und Durchschnitt&#8201;&#8212;&#8201;ermittelt, visualisiert und bspw. für externe Tools über JMX bereitgestellt werden. Auch eine kontinuierliche Online-Analyse ist möglich.
+Da es sich bei der Analyse um ein plugin-basiertes Framework handelt, ist auch eine Erweiterung mit eigenen Plugins für individuelle Lösungen leicht umsetzbar.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_was_diese_anleitung_nicht_bietet">1.2. Was diese Anleitung nicht bietet</h3>
+<div class="paragraph"><p>Diese Anleitung liefert keine Konzept, wie die vom Monitoring erfassten Daten komprimiert oder anderweitig zusammengefasst werden können. D.h. es kann u.U. zu erheblichen Datenmengen kommen.
+Bei jeder in der Produktion laufenden Anwendung, die das hier vorgestellte Verfahren verwendet, sollte unbedingt darauf geachtet werden, die entstehenden Daten periodisch zu komprimieren und/oder
+zu löschen.</p></div>
+<div class="paragraph"><p>Zur Bereitstellung des fachlichen Kontextes wird keine universelle Lösung geliefert, da dies in Anbetracht der Unterschiedlichkeit der möglichen Kontexte und Softwareprojekte nicht umzusetzen war.
+Stattdessen werden Beispielhafte Lösungen vorgestellt, die in vielen Fällen aber mit kleinen Anpassungen übernommen werden können. (Vergleiche <a href="#X15">Abschnitt 2.1. Punkt 5</a>.)</p></div>
+<div class="paragraph"><p>Das hier beschriebene Verfahren wurde zur Anwendung in kleinen und mittelgroßen Projekten entwickelt. Es beschränkt sich deshalb auf lokale Systeme und bietet &#8222;out of the Box&#8220; keine Lösung für ein Monitoring
+von verteilten Systemen.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_voraussetzungen">1.3. Voraussetzungen</h3>
+<div class="paragraph"><p>Um die in dieser Anleitung beschriebenen Verfahren einsetzen zu können, müssen die folgenden Voraussetzungen erfüllt sein:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Java 1.7 oder höher
+</p>
+</li>
+<li>
+<p>
+Kieker 1.9 (wird, bei Verwendung von Maven, transitiv über die Datei <code>performance-monitoring-1.0.jar</code> eingebunden)
+</p>
+</li>
+<li>
+<p>
+Spring-AOP (ist keine Voraussetzung für die <a href="#manu-instr">manuelle Instrumentierung</a>)
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Die Beispielklassen zur Bereitstellung des fachlichen Kontexts (<code>org.oasp.module.monitoring.<strong>ContextProvider</strong></code> und <code>org.oasp.module.monitoring.<strong>ManualContextProvider</strong></code>; <a href="#X15">s. Abschnitt 2.1. Punkt 5</a>) verwenden außerdem:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Spring 3.2.1
+</p>
+</li>
+<li>
+<p>
+javax.servlet 2.3
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_übersichtsdiagramm_br">1.4. Übersichtsdiagramm<br /></h3>
+<div class="imageblock">
+<div class="content">
+<img src="PM-Overview-color.png" alt="PM-Overview-color.png" />
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_monitoring">2. Monitoring</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Das folgende Kapitel gibt in Abschnitt <a href="#basic">2.1.</a> eine Schritt-für-Schritt-Anleitung, wie ein grundlegendes Performance-Monitoring eingerichtet werden kann.
+In Abschnitt <a href="#manu-instr">2.2.</a> wird eine alternative Möglichkeit der Codeinstrumentierung aufgezeigt. Die Abschnitte <a href="#konf">2.3.</a> - <a href="#X13">2.6.</a> befassen sich
+mit der Konfiguration sowie zusätzlichen Features des Monitorings.</p></div>
+<div class="sect2">
+<h3 id="basic">2.1. Einrichten des Basic Performance-Monitorings</h3>
+<div class="paragraph"><p>Im Folgenden wird in wenigen Schritten erklärt wie ein grundlegendes Performance-Monitoring erreicht werden kann. Dies ist ein guter Einstieg in das Monitoring mit Kieker und kann später individualisiert und erweitert werden.</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Füge folgende Zeilen der <code>pom.xml</code> Deines Java-Projekts hinzu:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>&lt;dependency&gt;
+  &lt;groupId&gt;org.oasp.module.monitoring&lt;/groupId&gt;
+  &lt;artifactId&gt;performance-monitoring&lt;/artifactId&gt;
+  &lt;version&gt;1.0&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p>Solltest Du kein Maven verwenden, musst Du das jar-File <code>performance-monitoring-1.0.jar</code> anderweitig dem Build-Path Deines Projekts hinzufügen.</p></div>
+</li>
+<li>
+<p>
+Die Datei <code>resources\samples\</code><code><strong>kieker.monitoring.properties</strong></code> (aus der <code>performance-monitoring-1.0.jar</code>) muss in das <code>META-INF</code> Verzeichnis Deines Projektes kopiert werden. In dieser Datei ist außerdem die Property <code>kieker.monitoring.writer.filesystem.AsyncFsWriter.customStoragePath</code> auf den Verzeichnispfad zu setzten, in dem die Monitoring-Logs angelegt werden sollen.
+</p>
+</li>
+<li>
+<p>
+Um den Programmcode mittels Spring-AOP mit Monitoring-Probes zu instrumentieren, muss die Datei <code>resources\samples\</code><code><strong>performance-monitoring.xml</strong></code> in alle Spring-&#8222;Application Contexts&#8220; importiert werden, in denen das Monitoring verwendet werden soll. Im Fall einer Standardanwendung nach Vorgaben der OASP könnte das folgendermaßen aussehen:
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+Kopieren der Datei <code>performance-monitoring.xml</code> in das Verzeichnis <code>&lt;Dein_Projekt&gt;\src\main\resources\resources\spring\crosscutting</code>.
+</p>
+</li>
+<li>
+<p>
+Importieren der Datei <code>performance-monitoring.xml</code> in beide vorhandenen &#8222;Application Contexts&#8220; durch Einfügen folgender Zeile …
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>&lt;import resource="classpath:/resources/spring/crosscutting/performance-monitoring.xml" /&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p>… in die Dateien <code>&lt;Dein_Projekt&gt;\src\main\resources\resources\spring\crosscutting.xml</code> und <code>&lt;Dein_Projekt&gt;\src\main\resources\resources\spring\gui-flows.xml</code>.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tipp</div>
+</td>
+<td class="content">Alternativ (oder ergänzend) kann der Programmcode auch manuell instrumentiert werden. Siehe dazu Abschnitt <a href="#manu-instr">2.2. Manuelle Instrumentierung</a>.</td>
+</tr></table>
+</div>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+Um zu bestimmen, welche Teile des Programmcodes grundsätzlich mit Monitoring-Probes versehen werden sollen, muss folgende Zeile aus der Datei <code>performance-monitoring.xml</code> angepasst werden:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>&lt;aop:advisor order="1" advice-ref="monitoringProbe" pointcut="execution(public * com.capgemini.gastronomy.restaurant..*.*(..))" /&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p>Das Attribut <code>pointcut</code> bestimmt mit einem regulären Ausdruck, an welchen Methoden welcher Spring-Beans eine Monitoring-Probe gesetzt wird.<br /></p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Wichtig</div>
+</td>
+<td class="content">Die Zeile <code>&lt;aop:config proxy-target-class="true"&gt;</code> in dieser Datei sorgt dafür, dass CGLib-Proxies anstelle von JDK-Dynamic-Proxies verwendet werden.
+Dies ist wichtig, da JDK-Dynamic-Proxies nur für Interfaces erstellt werden können.</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Anmerkung</div>
+</td>
+<td class="content">Zum genaueren Verständnis der regulären Ausdrücke, siehe Abschnitt <a href="#X12">2.5. Pointcut-Expressions</a>.</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Anmerkung</div>
+</td>
+<td class="content">Für eine detailliertere Bestimmung, welche Monitoring-Probes ein- und welche ausgeschaltet werden sollen siehe Abschnitt <a href="#X11">2.4. Aktivieren und Deaktivieren von Monitoring-Probes</a>.</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+<a id="X15"></a>Als letzter Schritt muss nun noch ein Weg gefunden werden, die Daten des fachlichen Kontexts an einer Kontrollinstanz (<code>org.oasp.module.monitoring.<strong>CustomControlFlowRegistry</strong></code>) zu registrieren.
+Dies muss in jedem Aufruf geschehen, bevor er die erste Monitoring-Probe durchläuft. Nur so ist gewährleistet, dass alle Probes immer auf den fachlichen Kontext des aktuellen Aufrufs zugreifen und die Messdaten später fachlich aggregiert und analysiert werden können.
+Zusätzlich muss auch am Ende jedes Aufrufs der fachliche Kontext wieder &#8222;abgemeldet&#8220; werden, um eine eindeutige Zuordnung der Daten sicherzustellen.
+&#160;
+</p>
+<div class="paragraph"><p>Eine Beispiellösung für dieses Problem liefert die Klasse <code>org.oasp.module.monitoring.<strong>ContextProvider</strong></code>. Diese kann über einen zweiten AOP-Advisor in der Datei <code>performance-monitoring.xml</code> in den Code integriert werden:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>&lt;aop:advisor order="0" advice-ref="contextProvider" pointcut="execution(public * com.capgemini.gastronomy.restaurant.gui..*.*Controller.*(..))" /&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p>Auch hier ist der reguläre Ausdruck der Pointcut-Expression anzupassen.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Wichtig</div>
+</td>
+<td class="content">Das Attribut <code>order=0</code> sorgt dafür, dass an einem Pointcut, an dem sowohl Monitoring-Probe als auch <code>ContextProvider</code> ausgeführt werden, letzterer zuerst durchlaufen wird.
+Dennoch musst Du mit der Pointcut-Expression selber dafür sorgen, dass er am Entrypoint jedes Aufrufs, der fachlich gemonitort werden soll, aufgerufen wird.</td>
+</tr></table>
+</div>
+</li>
+</ol></div>
+<div class="paragraph"><p>Das Basic Performance-Monitoring ist nun eingerichtet und produziert während der Ausführung des überwachten Programms Monitoring-Records. Hierzu erstellt Kieker <code>.dat</code>-Dateien und legt diese
+in das von Dir in der Property <code>kieker.monitoring.writer.filesystem.AsyncFsWriter.customStoragePath</code> angegebene Verzeichnis.
+In der <code>.dat</code>-Datei wird jeder Record im CSV(Comma Separated Values)-Format in einer Zeile dargestellt. Ein Beispiel könnte so aussehen (hier aus Platzgründen auf mehrere Zeilen verteilt)&#8230;</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$1;1407402241982072647;public void com.capgemini.gastronomy.restaurant.persistence.common.AbstractRestaurantDao.delete(java.lang.Object);
+B263CD5C792468124DFB90166E35BD8A;3;1407402241974333720;1407402241982061097;CE08039;5;4;deleteTable@1407402241879;65078309;44;true</code></pre>
+</div></div>
+<div class="paragraph"><p>... und ist folgendermaßen zu lesen:<br />
+Der erste Wert (<code>$0</code> oder <code>$1</code>) gibt die Klasse des Monitoring-Records an. Diese werden in der parallel angelegten Datei <code>kieker.map</code> festgehalten.
+Normalerweise steht <code>$1</code> für den <code>kieker.common.record.misc.<strong>KiekerMetadataRecord</strong></code>. Dieser kann in der <a href="http://kieker-monitoring.net/api/1.9/">Kieker-API</a> genauer betrachtet werden.
+<code>$0</code> steht für den <code>org.oasp.module.monitoring.<strong>CustomOperationExecutionRecord</strong></code>; wie auch in diesem Beispiel.</p></div>
+<div class="paragraph"><p>Seine Werte können wie folgt interpretiert werden:</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph"><p>&lt;RT&gt;;&lt;LT&gt;;&lt;MS&gt;;&lt;SID&gt;;&lt;TrID&gt;;&lt;Tin&gt;;&lt;Tout&gt;;&lt;HN&gt;;&lt;EOI&gt;;&lt;ESS&gt;;&lt;AID&gt;;&lt;UID&gt;;&lt;ThID&gt;;&lt;Suc&gt;<br /></p></div>
+</div></div>
+<div class="tableblock">
+<table rules="all"
+width="75%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="10%" />
+<col width="8%" />
+<col width="81%" />
+<thead>
+<tr>
+<th align="center" valign="middle">Kürzel</th>
+<th align="center" valign="middle">Fachlicher Kontext</th>
+<th align="left" valign="middle">Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;RT&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Record-Type</em> (Klassenname des Records in <code>kieker.map</code> wie oben beschrieben)</p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;LT&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Logging-Timestamp</em></p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;MS&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Method-Signature</em> (Signatur der Methode an der die Monitoring-Probe angebracht ist)</p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;SID&gt;</p></td>
+<td align="center" valign="middle"><p class="table"><strong>ja</strong></p></td>
+<td align="left" valign="middle"><p class="table"><em>Session-ID</em></p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;TrId&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Trace-ID</em> (eine Korrelations-ID, über die Records einem Aufruf zugeordnet werden können)</p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;Tin&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Time-IN</em> (Timestamp <strong>vor</strong> dem Methodeaufruf)</p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;Tout&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Time-OUT</em> (Timestamp <strong>nach</strong> dem Methodenaufruf)</p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;HN&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Host-Name</em></p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;EOI&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Execution Order Index</em> (Index, der bei jeder Messsonde eines Aufrufs um eins erhöht wird)</p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;ESS&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Execution Stack Size</em> (gibt die Schachtelungstiefe des Aufrufs an)</p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;AID&gt;</p></td>
+<td align="center" valign="middle"><p class="table"><strong>ja</strong></p></td>
+<td align="left" valign="middle"><p class="table"><em>Action-ID</em> (Use-Case-Name oder ID der Use-Case-Instanz)</p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;UID&gt;</p></td>
+<td align="center" valign="middle"><p class="table"><strong>ja</strong></p></td>
+<td align="left" valign="middle"><p class="table"><em>User-ID</em></p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;ThID&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Thread-ID</em></p></td>
+</tr>
+<tr>
+<td align="center" valign="middle"><p class="table">&lt;Suc&gt;</p></td>
+<td align="center" valign="middle"><p class="table">nein</p></td>
+<td align="left" valign="middle"><p class="table"><em>Success</em> (Indikator, ob die Methode fehlerlos beendet wurde)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Achtung</div>
+</td>
+<td class="content">Die ersten beiden Daten (&lt;RT&gt; &amp; &lt;LT&gt;) kommen nicht aus der <code>toArray()</code>-Methode des Records. So würde man mit <code>&lt;record&gt;.toArray()[0]</code> das Datum &lt;MS&gt; adressieren.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="manu-instr">2.2. Manuelle Instrumentierung</h3>
+<div class="paragraph"><p>Ist die Instrumentierung mit Spring-AOP nicht möglich oder unerwünscht, so können alternativ auch manuell Monitoring-Probes im Code integriert werden. Für diesen Zweck wurde die Klasse <code>org.oasp.module.monitoring.<strong>ManualOperationExecutionProbe</strong></code> implementiert.
+Wie diese Klasse zu verwenden ist, zeigt das folgenden Beispiel:</p></div>
+<div class="paragraph"><p>Diese beispielhafte Methode soll überwacht werden:</p></div>
+<div class="listingblock">
+<div class="content"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre> <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">createTable</span><span class="o">(</span><span class="kt">long</span> <span class="n">id</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">ValidationException</span> <span class="o">{</span>
+
+    <span class="k">this</span><span class="o">.</span><span class="na">tableManagement</span><span class="o">.</span><span class="na">createTable</span><span class="o">(</span><span class="n">id</span><span class="o">);</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">LOG</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">&quot;Restaurant table with id &#39;&quot;</span> <span class="o">+</span> <span class="n">id</span> <span class="o">+</span> <span class="s">&quot;&#39; will be created.&quot;</span><span class="o">);</span>
+    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+ <span class="o">}</span>
+</pre></div>
+</td></tr></table></div></div>
+<div class="paragraph"><p>Hierzu wird zu Beginn der Methode die Methode <code>ManualOperationExecutionProbe.<strong>before(String)</strong></code> aufgerufen, um den Monitoring-Vorgang einzuleiten. Als Parameter benötigt sie die Signatur der überwachten Methode.
+Der ursprüngliche Code der überwachten Methode sollte von einem <code>try</code>-Block umschlossen werden, damit auch im Falle einer Exception der Monitoring-Vorgang abgeschlossen werden kann.
+Dies geschieht mit Hilfe der Methode <code>ManualOperationExecutionProbe.<strong>after(MonitoringInfo)</strong></code>, die als Parameter das Ergebnis der <code>ManualOperationExecutionProbe.<strong>before(String)</strong></code>-Methode benötigt. Zusätzlich muss ein Boolean übergeben werden, der angibt ob die Methode fehlerlos beendet wurde.</p></div>
+<div class="paragraph"><p>Eine manuelle Instrumentierung der Methode könnte also folgendermaßen aussehen:</p></div>
+<div class="listingblock">
+<div class="content"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18</pre></div></td><td class="code"><div class="highlight"><pre>   <span class="n">String</span> <span class="n">sigName</span> <span class="o">=</span> <span class="s">&quot;public boolean createTable(long)&quot;</span><span class="o">;</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="n">sigName</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getDeclaredMethod</span><span class="o">(</span><span class="s">&quot;createTable&quot;</span><span class="o">,</span> <span class="kt">long</span><span class="o">.</span><span class="na">class</span><span class="o">).</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">NoSuchMethodException</span> <span class="o">|</span> <span class="n">SecurityException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">LOG</span><span class="o">.</span><span class="na">warn</span><span class="o">(</span><span class="s">&quot;[MONITORING ISSUE] Method signature of class &quot;</span> <span class="o">+</span> <span class="k">this</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">toString</span><span class="o">()</span>
+          <span class="o">+</span> <span class="s">&quot; could not be obtained. Using shortened verion: &#39;&quot;</span> <span class="o">+</span> <span class="n">sigName</span> <span class="o">+</span> <span class="s">&quot;&#39;&quot;</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="n">MonitoringInfo</span> <span class="n">mInfo</span> <span class="o">=</span> <span class="n">ManualOperationExecutionProbe</span><span class="o">.</span><span class="na">before</span><span class="o">(</span><span class="n">sigName</span><span class="o">);</span>
+    <span class="kt">boolean</span> <span class="n">success</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">tableManagement</span><span class="o">.</span><span class="na">createTable</span><span class="o">(</span><span class="n">id</span><span class="o">);</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">LOG</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">&quot;Restaurant table with id &#39;&quot;</span> <span class="o">+</span> <span class="n">id</span> <span class="o">+</span> <span class="s">&quot;&#39; will be created.&quot;</span><span class="o">);</span>
+      <span class="n">success</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+      <span class="n">ManualOperationExecutionProbe</span><span class="o">.</span><span class="na">after</span><span class="o">(</span><span class="n">mInfo</span><span class="o">,</span> <span class="n">success</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+  <span class="o">}</span>
+</pre></div>
+</td></tr></table></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Achtung</div>
+</td>
+<td class="content">
+<div class="paragraph"><p>Den String-Parameter für die Methode <code>ManualOperationExecutionProbe.<strong>before(String)</strong></code> musst Du selber besorgen. Er muss einem String entsprechen, wie ihn die Methode
+<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/reflect/Method.html#toString%28%29"><code>java.lang.reflect.Method.toString()</code></a>
+produzieren würde. D.h. er muss folgende Syntax berücksichtigen:</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph"><p>&lt;Zugriffsmodifikator&gt; &lt;Rückgabetyp&gt; &lt;vollqualifizierte MethodenName&gt;(&lt;ParameterTypA&gt;, &lt;ParameterTypB, &#8230;) [throws &lt;throwable&gt;]</p></div>
+</div></div>
+<div class="paragraph"><p>Andernfalls funktioniert das <a href="#X11">Ein- und Ausschalten von Monitoring-Probes</a> nicht.
+Die Zeilen 1 - 7 zeigen eine beispielhafte Möglichkeit, diesen String zusammenzustellen.</p></div>
+</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tipp</div>
+</td>
+<td class="content">Die manuelle Instrumentierung kann auch ergänzend zur Instrumentierung mit Spring-AOP genutzt werden, um z.B. Klassen, die keine Spring-Beans sind, zu monitoren.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="konf">2.3. Konfiguration des Monitorings</h3>
+<div class="paragraph"><p>Zur Konfiguration des Monitorings wird die Datei <code>kieker.monitoring.properties</code> verwendet, die per Default im <code>META-INF</code> Verzeichnis des Projekts liegen sollte.
+Obwohl sie ausführlich dokumentiert ist, soll hier kurz auf die wichtigsten Properties eingegangen werden:</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="ulist"><ul>
+<li>
+<p>
+<code>kieker.monitoring.enabled</code>&#8201;&#8212;&#8201;Sollte normalerweise <code>true</code> sein. Andernfalls wird das Monitoring direkt nach dem Start der Anwendung abgeschaltet.
+</p>
+</li>
+<li>
+<p>
+<code>kieker.monitoring.timer</code>    &#8201;&#8212;&#8201;Sollte <code>kieker.monitoring.timer.SystemNanoTimer</code> sein, da der <code>SystemMilliTimer</code> in den meisten Fällen nicht präzise genug ist.
+</p>
+</li>
+<li>
+<p>
+<code>kieker.monitoring.timer.SystemNanoTimer.unit</code>&#8201;&#8212;&#8201;Sollte immer <code>0</code> sein, da einige Analyse-Plugins nur mit Nanosekunden arbeiten können.
+</p>
+</li>
+<li>
+<p>
+<code>kieker.monitoring.writer</code>&#8201;&#8212;&#8201;Sollte <code>kieker.monitoring.writer.filesystem.AsyncFsWriter</code> sein, da die Analyse auf diesen Writer abgestimmt ist.
+</p>
+</li>
+<li>
+<p>
+<code>kieker.monitoring.writer.filesystem.AsyncFsWriter.QueueSize</code>&#8201;&#8212;&#8201;Produziert das Monitoring zeitweise zu viele Monitoring-Records, kann über diese Property die Größe des Buffers angepasst werden.
+</p>
+</li>
+<li>
+<p>
+<code>kieker.monitoring.writer.filesystem.AsyncFsWriter.QueueFullBehavior</code>&#8201;&#8212;&#8201;Normalerweise <code>0</code>. Sollte der interne Buffer aufgrund von zu vielen Records überlaufen, kann diese Property auf <code>2</code> gesetzt werde. Dann werden allerdings die überzähligen Records verworfen. Diese Property sollte nicht auf <code>1</code> gesetzt werden, da der Writer sonst nicht mehr asynchron arbeitet und die Anwendung erheblich verlangsamen kann.
+</p>
+</li>
+</ul></div>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Anmerkung</div>
+</td>
+<td class="content">Bei Datei <code>resources\samples\</code><code><strong>kieker.monitoring.properties</strong></code> handelt es sich um eine gekürzte Form des von Kieker mitgelieferten Originals. Solltest Du Dich dazu entscheiden, die Analyse selber in die Hand zu nehmen und
+den <code>kieker.monitoring.writer.filesystem.AsyncFsWriter</code> durch einen anderen zu ersetzen, empfehle ich das Original heranzuziehen, das in jedem <a href="http://kieker-monitoring.net/download/">Release von Kieker</a> enthalten ist.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="X11">2.4. Aktivieren und Deaktivieren von Monitoring-Probes</h3>
+<div class="paragraph"><p>Um Monitoring-Probes zur Laufzeit zu aktivieren oder zu deaktivieren, kann eine Pattern-List in der Datei <code>kieker.monitoring.adaptiveMonitoring.conf</code> verwendet werden.
+Hierzu müssen folgende Properties in der Datei <code>kieker.monitoring.properties</code> gesetzt werden:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>kieker.monitoring.adaptiveMonitoring.enabled=true
+...
+kieker.monitoring.adaptiveMonitoring.configFile=&lt;Pfad zur Datei&gt;
+...
+kieker.monitoring.adaptiveMonitoring.readInterval=30</code></pre>
+</div></div>
+<div class="paragraph"><p>Die erste Property schaltet das adaptive Monitoring ein. In der Zweiten ist der Pfad zur Datei <code>kieker.monitoring.adaptiveMonitoring.conf</code> anzugeben. Mit der Dritten kann das Poll-Intervall in Sekunden festgelegt werden.</p></div>
+<div class="paragraph"><p>Die Syntax der Pattern-List ist in der Datei <code>kieker.monitoring.adaptiveMonitoring.conf</code> mit einigen Beispielen erklärt.</p></div>
+<div class="paragraph"><p>Alternativ können Monitoring-Probes auch über den <a href="#X13">Zugriff auf den Monitoring-Controller via JMX</a> ein- und ausgeschaltet werden.</p></div>
+</div>
+<div class="sect2">
+<h3 id="X12">2.5. Pointcut-Expressions</h3>
+<div class="paragraph"><p>In der Datei <code>performance-monitoring.xml</code> wird mittels Pointcut-Expressions bestimmt, welche Methoden welcher Spring-Beans durch das Monitoring überwacht werden.
+Diese Pointcut-Expressions verwenden die AspectJ-Pointcut-Expression-Language, die im <a href="https://www.eclipse.org/aspectj/doc/next/progguide/language.html">AspectJ Programmers Guide</a> näher beschrieben ist.</p></div>
+</div>
+<div class="sect2">
+<h3 id="X13">2.6. Zugriff auf den Monitoring-Controller via JMX</h3>
+<div class="paragraph"><p>Auf den Monitoring-Controller von Kieker kann als MBean über JMX zugegriffen werden. Auf diese Weise kann beispielsweise zur Laufzeit das gesamte Monitoring oder einzelne Probes ein- und ausgeschaltet werden.
+Hierzu müssen die folgenden Properties in der  Datei <code>kieker.monitoring.properties</code> gesetzt werden:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>kieker.monitoring.jmx=true
+...
+kieker.monitoring.jmx.MonitoringController=true</code></pre>
+</div></div>
+<div class="paragraph"><p>Nun kann z.B. JConsole verwendet werden, um auf den Monitoring-Controller zuzugreifen. Dabei ist zu beachten, dass Kieker zum Classpath von JConsole hinzugefügt wird.
+Eine detailliertere Erläuterung findest Du im <a href="http://kieker-monitoring.net/documentation/">Kieker-User-Guide</a>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_individuelle_anpassung_des_monitorings">2.7. Individuelle Anpassung des Monitorings</h3>
+<div class="paragraph"><p>Sollten Dir die vom Monitoring festgehaltenen Daten nicht umfangreich genug sein, so kannst Du es um zusätzliche Daten erweitern.
+Hierzu sollten zunächst die Klassen <code>org.oasp.module.monitoring.<strong>CustomOperationExecutionRecord</strong></code> und <code>org.oasp.module.monitoring.<strong>CustomOperationExecutionMethodInvocationInterceptor</strong></code>
+(bzw. <code>org.oasp.module.monitoring.<strong>ManualOperationExecutionProbe</strong></code> im Falle von manueller Instrumentierung) betrachtet und erweitert werden.</p></div>
+<div class="paragraph"><p>Sollte es sich bei den neuen Daten um fachlichen Kontext handeln, so muss außerdem die Klasse <code>org.oasp.module.monitoring.<strong>CustomControlFlowRegistry</strong></code> erweitert werden
+und auch bei der Registrierung des fachlichen Kontexts an der Instanz dieser Klasse müssen die neuen Daten berücksichtigt werden (<a href="#X15">s. Abschn. 2.1. Punkt 5</a>).</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Anmerkung</div>
+</td>
+<td class="content">Einige der genannten Klassen lassen sich nicht oder nur sehr umständlich im Sinne von "<code>extend</code>" erweitern. In diesen Fällen muss leider auf das Prinzip
+des Kopierens und Ergänzens zurückgegriffen werden.</td>
+</tr></table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_analyse">3. Analyse</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Die vom Monitoring produzierten Monitoring-Records im CSV Format können mit Tools wie z.B. Excel ausgewertet werden.
+Diese Anleitung beschreibt in Abschnitt <a href="#X21">3.1.</a> - <a href="#X23">3.3.</a> zusätzlich, wie eine grundlegende Analyse mit Hilfe des plugin-basierten &#8222;Pipe-and-Filter Frameworks&#8220; und der WebGUI von Kieker
+durchgeführt werden kann. Hierzu werden eine Reihe von fertigen Plugins bereitgestellt, die in Abschnitt <a href="#X24">3.4.</a> dokumentiert sind. In Abschnitt <a href="#X25">3.5.</a> wird außerdem beschrieben, wie
+das Framework um selbstgeschriebene Plugins schnell erweitert werden kann, um individuelle Lösungen zu ermöglichen. Abschnitt <a href="#X26">3.6.</a> erläutert wie eine Analyse ohne die WebGUI durchgeführt werden kann.</p></div>
+<div class="sect2">
+<h3 id="X21">3.1. Das Pipe-and-Filter Framework</h3>
+<div class="paragraph"><p>Das Package <code>Kieker.Analysis</code> stellt ein plugin-basiertes Framework zur Verfügung, das eine individuell konfigurier- und erweiterbare Analyse ermöglicht.
+Hierbei speist immer ein Reader-Plugin&#8201;&#8212;&#8201;das Monitoring-Records in irgendeiner Form einliest&#8201;&#8212;&#8201;Records in ein Netzwerk aus mehreren Filter-Plugins, die die Records dann
+weiterverarbeiten, aggregieren, analysieren, visualisieren oder auch für externe Schnittstellen bereitstellen. Allen Filter-Plugins ist gemein, dass sie immer über mindestens einen Input-Port
+verfügen, über den sie Records oder andere Objekte, die bei der Weiterverarbeitung der Records entstehen, empfangen können. Die meisten verfügen außerdem über mindestens einen Output-Port,
+der zur Weiterleitung von Daten an andere Plugins dient.</p></div>
+<div class="paragraph"><p>Für eine detailliertere Beschreibung ziehe bitte den <a href="http://kieker-monitoring.net/documentation/">Kieker-User-Guide</a> zu Rate.</p></div>
+</div>
+<div class="sect2">
+<h3 id="X22">3.2. Die Kieker-WebGUI</h3>
+<div class="paragraph"><p>Das Erstellen, Konfigurieren und Ausführen der Plugin-Netzwerke kann zwar unter Verwendung einer Java-API erfolgen, doch ist dies mühsam und fehleranfällig. Deshalb
+soll in diesem Guide die Kieker-WebGUI zur Analyse verwendet werden, die zu eben diesem Zweck von Kieker entwickelt wird. Zum derzeitigen Stand (Kieker-1.9) befindet sich die WebGUI noch in
+der Beta-Phase, doch sind die wichtigen Funktionalitäten schon ausreichend implementiert, um brauchbare Ergebnisse zu erzielen und mit einer ausführlichen Weiterentwicklung ist zu rechnen.</p></div>
+<div class="paragraph"><p>Im  <a href="http://kieker-monitoring.net/blog/everything-in-sight-kiekers-webgui-in-action/">Kieker Blog</a> kann ein ausführlicherer Überblick über die WebGUI gewonnen werden.</p></div>
+</div>
+<div class="sect2">
+<h3 id="X23">3.3. Erstellung eines beispielhaften Plugin-Netzwerks</h3>
+<div class="paragraph"><p>Im folgenden wird unter Verwendung der Kieker-WebGUI ein Beispielhaftes Plugin-Netzwerk erstellt, um die Verwendung der WebGUI zu verdeutlichen.</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Entpacke das <code>kieker-webgui-1.9_binaries.zip</code>-File in ein beliebiges Verzeichnis.
+</p>
+</li>
+<li>
+<p>
+Führe das Skript <code>kieker-webgui-1.9_binaries\bin\</code><code><strong>Kieker.WebGUI.bat</strong></code> aus, um die WebGUI zu starten. (Dies kann einige Sekunden dauern.)
+</p>
+</li>
+<li>
+<p>
+Gib folgende URL <a href="http://localhost:8080/Kieker.WebGUI/login">http://localhost:8080/Kieker.WebGUI/login</a> in Deinen Webbrowser ein.
+</p>
+</li>
+<li>
+<p>
+Logge Dich mit dem Benutzernamen &#8222;admin&#8220; und dem Passwort &#8222;kieker&#8220; ein.
+</p>
+</li>
+<li>
+<p>
+Klicke oben links auf &#8222;Datei&#8220; &#8594; &#8222;Neues Projekt&#8220;, um ein Projekt mit beliebigem Namen zu erstellen; im Folgenden als <code>&lt;Dein_Projekt&gt;</code> bezeichnet.<br />
+        Es wurde nun ein Verzeichnis <code>kieker-webgui-1.9_binaries\bin\data\</code><code><strong>&lt;Dein_Projekt&gt;</strong></code> erstellt.
+</p>
+</li>
+<li>
+<p>
+Klicke nun unter <a href="http://localhost:8080/Kieker.WebGUI/pages/">http://localhost:8080/Kieker.WebGUI/pages/</a> auf &lt;Dein_Projekt&gt; &#8594; &#8222;Analyse Editor&#8220;. Nun siehst Du die Seite, auf der Plugin-Netzwerke zusammengestellt werden können.
+</p>
+</li>
+<li>
+<p>
+Importiere jetzt die Datei <code>performance-monitoring-1.0.jar</code> in Dein Projekt. Hierzu klickst Du oben links auf &#8222;Datei&#8220; &#8594; &#8222;Bibliotheken Verwalten&#8220;  und im daraufhin erscheinenden Popup
+auf &#8222;Durchsuchen&#8220;. Wähle jetzt die eben genannte Datei aus. Damit ist gewährleistet, dass Dein Projekt über die eigens für diese Anleitung geschriebenen Klassen verfügt.
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tipp</div>
+</td>
+<td class="content">Alternativ können .jar-Datein, die Klassen zur Analyse enthalten, auch in das Verzeichnis <code>kieker-webgui-1.9_binaries\bin\data\&lt;Dein_Projekt&gt;\</code><code><strong>lib</code></strong> kopiert werden.</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+Durch klicken auf Plugins im Bereich &#8222;Verfügbare Plugins&#8220; auf der Linken Seite, fügst Du sie Deinem Plugin-Netzwerk hinzu. Klicke zunächst auf <code>FSReader</code>. Dieser erscheint nun
+als graues Rechteck im Haupt-Widget und lässt sich durch Ziehen mit der Maus positionieren.
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Anmerkung</div>
+</td>
+<td class="content">Über das Kästchen mit der Aufschrift &#8222;Globale Konfiguration&#8220; lässt sich die Zeiteinheit der Monitoring-Records angeben; in fast allen Fällen kann es beim Default <code>NANOSECONDS</code> belassen werden.</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+Klicke auf den <code>FSReader</code> im Haupt-Widget, um im unteren Bereich seine Properties einzublenden. Hier kann jedes Plugin konfiguriert werden. Gib für die Property <code>inputDirs</code> des <code>FSReader</code>
+        den Pfad zu dem Verzeichnis an, in dem sich die zu analysierenden Monitoring-Records befinden.
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Wichtig</div>
+</td>
+<td class="content">Es muss das Verzeichnis sein, in dem sich die <code>.map</code> und <code>.dat</code> Dateien befinden. Nicht etwa ein Parent-Verzeichnis!</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+Füge nun einen <code>RecordContentFilter</code> Deinem Plugin-Netzwerk hinzu. Dieser filtert <code>OperationExecutionRecords</code> anhand ihres Inhalts; z.B. der Methodensignatur.
+</p>
+</li>
+<li>
+<p>
+Verbinde durch Anklicken den Output-Port des <code>FSReader</code> mit dem Input-Port des <code>RecordContentFilter</code>.
+</p>
+</li>
+<li>
+<p>
+Setze nun die Properties des <code>RecordContentFilter</code> wie folgt:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+type: <code>STRING</code>
+</p>
+</li>
+<li>
+<p>
+compare: <code>GE</code> (dies entspricht für Strings einem <em>contains</em>)
+</p>
+</li>
+<li>
+<p>
+arrayIndex: <code>0</code> (am Index 0 befindet sich in der Array-Darstellung des Records normalerweise die Methodensignatur)
+</p>
+</li>
+<li>
+<p>
+filterKey: &lt;Ein Teil der Methodensignatur, die alle Records enthalten sollen, die Du herausfiltern möchtest. Z.B. <code>com.capgemini.gastronomy.restaurant.</code>&gt;
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tipp</div>
+</td>
+<td class="content">Die Symbolleiste des Analyse Editors verfügt über einen Button zur automatischen Anordnung der Plugins. (&#8222;Layoutet den Graphen&#8220;)</td>
+</tr></table>
+</div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Füge als nächstes einen <code>RecordConverter</code> hinzu und verbinde seinen Input-Port mit dem Output-Port <code>recordsOutTrue</code> des <code>RecordContentFilter</code>.
+Dieser wandelt die Records in Objekte der Klasse <code>kieker.tools.opad.record.<strong>NamedDoubleRecord</strong></code> um&#8201;&#8212;&#8201;eine abstraktere Klasse, die nur noch Timestamp und Responsetime des Records enthält.
+Hierzu müssen keine Properties gesetzt werden.
+</p>
+</li>
+<li>
+<p>
+Als nächstes muss dem Netzwerk ein <code>RecordResponseTimeProcessFilter</code> hinzugefügt werden. Verbinde seinen Input-Port mit dem Output-Port des <code>RecordConverter</code> und belasse seine Properties wie voreingestellt.
+Der <code>RecordResponseTimeProcessFilter</code> aggregiert nun die ankommenden <code>NamedDoubleRecords</code> und berechnet aus diesen Anzahl, Minimum, Maximum, Median und Durchschnitt der Antwortzeiten.
+Die Ergebnisse sendet er alle fünf Sekunde (Property &#8222;deliverPeriodInMS&#8220; = <code>5000</code>) über die fünf Output-Ports weiter.
+</p>
+</li>
+<li>
+<p>
+Die vom <code>RecordResponseTimeProcessFilter</code> berechneten Werte lassen sich mit einem <code>TimeSeriesDisplayFilter</code> in der WebGUI visualisieren. Füge einen solchen Deinem Plugin-Netzwerk hinzu und
+verbinde den Output-Port <code>outputAvg</code> des <code>RecordResponseTimeProcessFilter</code> (dieser überträgt den Durchschnittswert) mit einem der Input-Ports des <code>TimeSeriesDisplayFilter</code>.
+Setze nun die Property des entsprechenden Input-Ports des <code>TimeSeriesDisplayFilter</code> auf &#8222;average&#8220;, um zu benennen <strong>was</strong> diese Serie darstellt. D.h. wenn Du die Verbindungslinie z.B. zum
+Input-Port <code>inputSeriesA</code> gezogen hast, solltest Du die für die Property <code>seriesA</code> &#8222;average&#8220; eingeben.
+</p>
+</li>
+<li>
+<p>
+Dein erstes Plugin-Netzwerk ist nun fertig und betriebsbereit. Klicke auf das Diskettensymbol oben links, um Dein Projekt zu speichern. Die folgende Grafik zeigt, wie das ganze in etwa
+aussehen sollte:
+</p>
+<div class="imageblock">
+<div class="content">
+<img src="SS-netzwerk_example.png" alt="SS-netzwerk_example.png" />
+</div>
+</div>
+</li>
+<li>
+<p>
+Um eine Visualisierung der <code>TimeSeriesDisplayFilter</code> zu ermöglichen, muss diese noch im &#8222;Cockpit Editor&#8220; eingerichtet werden (Button oben rechts).
+</p>
+</li>
+<li>
+<p>
+Der Cockpit Editor dient der Konfiguration der Visualisierung, wie sie später im Cockpit-Bereich zu sehen ist. In unserem Fall verfügt nur der
+<code>TimeSeriesDisplayFilter</code> über eine Visualisierung. Klicke zunächst oben links auf &#8222;Datei&#8220; &#8594; &#8222;Neue Ansicht&#8220;, um eine neue Ansicht zu erstellen. Klicke dann links auf den Namen der gerade
+erstellten Ansicht und auf &#8222;Ansicht Selektieren&#8220;, um sie auszuwählen.
+</p>
+</li>
+<li>
+<p>
+Füge nun das &#8222;XYPlot Display&#8220; des <code>TimeSeriesDisplayFilter</code> der Ansicht hinzu, indem Du rechts auf <code>TimeSeriesDisplayFilter</code> &#8594; &#8222;XYPlot Display&#8220; klickst.
+Optional kannst Du dem Display noch einen Namen geben, durch setzen der Property &#8222;Name&#8220; im unteren Bereich.
+</p>
+</li>
+<li>
+<p>
+Speichere Dein Projekt erneut durch Anklicken des Diskettensymbols.
+</p>
+</li>
+<li>
+<p>
+Wechsle zur Analyse-Ansicht mit dem Button &#8222;Analyse&#8220; oben rechts.
+</p>
+</li>
+<li>
+<p>
+Klicke unten auf &#8222;Analyse Instanziieren&#8220; gefolgt von &#8222;Analyse Starten&#8220;, um die Analyse zu starten.
+</p>
+</li>
+<li>
+<p>
+Wechsle nun in die &#8222;Cockpit&#8220;-Ansicht und wähle die von Dir erstellte Ansicht aus, um das Ergebnis Deiner Analyse zu betrachten. Je nach verwendeten Monitoring-Daten sollte Deine
+Visualisierung der folgenden Grafik mehr oder weniger ähneln:
+</p>
+<div class="imageblock">
+<div class="content">
+<img src="SS-xyplot-example.png" alt="SS-xyplot-example.png" />
+</div>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Anmerkung</div>
+</td>
+<td class="content">Du solltest die Analyse in der Analyse-Ansicht immer zurücksetzen, bevor Du eine neue konfigurierst oder startest.</td>
+</tr></table>
+</div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="X24">3.4. Übersicht der bereitgestellten Plugin-Klassen</h3>
+<div class="paragraph"><p>Im folgenden findest Du eine Übersicht der wichtigsten Filter-Plugins, die für die Analyse mit dem &#8222;Pipe-and-Filter Framework&#8220; empfohlen werden. Mit Hilfe dieser Plugins ist eine grundlegende
+Analyse bereits möglich. So können Records, die von der Klasse <code>kieker.common.record.controlflow.<strong>OperationExecutionRecord</strong></code> erben, mit dem <a href="#RCFilter"><strong>RecordContentFilter</strong></a> nach jeglichem Inhalt
+gefiltert werden. Mit dem <a href="#RRPFilter"><strong>RecordResponseTimeProcessFilter</strong></a> lassen sich die gefilterten Daten dann aggregieren und zu Kennzahlen zusammenfassen. Diese Kennzahlen können dann mit
+dem <a href="#TSDFilter"><strong>TimeSeriesDisplayFilter</strong></a> in der WebGUI visualisiert und/oder mit dem <a href="#JMXFilter"><strong>JMXDataProviderFilter</strong></a> über JMX bereitgestellt werden, um mit externen Monitoring-Tools darauf zuzugreifen.</p></div>
+<div class="paragraph"><p>Kieker stellt noch eine Reihe weiterer Plugins&#8201;&#8212;&#8201;die in der WebGUI auch aufgelistet sind&#8201;&#8212;&#8201;zur Verfügung. Diese können in der <a href="http://kieker-monitoring.net/api/1.9/">Kieker-API</a> nachgeschlagen
+werden, sind aber zum derzeitigen Stand (Kieker-1.9) nur spärlich dokumentiert.</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong><span class="underline">FSReader</span></strong><a id="FSReader"></a> (<code>kieker.analysis.plugin.reader.filesystem.FSReader</code>)
+</dt>
+<dd>
+<p>
+Dies ist der von Kieker bereitgestellte Standardreader für die offline Analyse. Er sollte verwendet werden, wenn während
+der Analyse keinen neuen Monitoring-Records zu erwarten sind; diese würde er einfach ignorieren. Er wandelt die in der .dat-Datei gefundenen Records wieder in Java-Objekte um und sendet sie weiter.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Input-Ports
+</dt>
+<dd>
+<p>
+                keine&#8201;&#8212;&#8201;Das Verzeichnis zum Lesen wird in der Property <code>inputDirs</code> angegeben.
+</p>
+</dd>
+<dt class="hdlist1">
+Output-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>monitoringRecords</code>
+</dt>
+<dd>
+<p>
+Die gelesenen Records werden über diesen Output-Port weitergeleitet.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Properties
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>inputDirs</code>
+</dt>
+<dd>
+<p>
+Der Pfad zum Verzeichnis, das die .dat-Datei mit den Monitoring-Records im CSV-Form enthält.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ignoreUnknownRecordTypes</code>
+</dt>
+<dd>
+<p>
+Ist diese Property auf <code>false</code> gesetzt, so bricht die Analyse ab, wenn ein Record von unbekanntem Typ gelesen wird.<br />
+                <strong>Default</strong>: <code>false</code>
+</p>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</div></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong><span class="underline">RecordConverter</span></strong> (<code>org.oasp.module.monitoring.analysis.RecordConverter</code>)
+</dt>
+<dd>
+<p>
+Dieses Plugin wandelt eingehende Objekte vom Typ <code>kieker.common.record.controlflow.<strong>OperationExecutionRecord</strong></code> (oder abgeleitete Klassen)
+in Objekte vom Typ <code>kieker.tools.opad.record.<strong>NamedDoubleRecord</strong></code> um. Diese enthalten nur noch Timestamp und Responsetime und können vom <a href="#RRPFilter"><strong>RecordResponseTimeProcessFilter</strong></a> verarbeitet werden.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Input-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>oer</code>
+</dt>
+<dd>
+<p>
+Empfängt Objekte vom Typ <code>kieker.common.record.controlflow.<strong>OperationExecutionRecord</strong></code>.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Output-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>ndr</code>
+</dt>
+<dd>
+<p>
+Leitet Objekte vom Typ <code>kieker.tools.opad.record.<strong>NamedDoubleRecord</strong></code> weiter.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Properties
+</dt>
+<dd>
+<p>
+                keine
+</p>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tipp</div>
+</td>
+<td class="content">Die folgenden Filter-Plugins sind eigens für diese Anleitung geschrieben worden und sind zusätzlich ausführlich im JavaDoc der Datei <code>performance-monitoring-1.0.jar</code> dokumentiert.</td>
+</tr></table>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong><span class="underline">OnlineFSReader</span></strong> (<code>org.oasp.module.monitoring.analysis.OnlineFSReader</code>)
+</dt>
+<dd>
+<p>
+Dieser Reader ist eine Erweiterung des <a href="#FSReader"><strong>FSReader</strong></a>
+und ist dafür konzipiert, eine kontinuierliche Analyse während des Monitorings zu ermöglichen. Findet er keine weiteren Record-Einträge in einer .dat-Datei, so wartet er auf neue und überprüft auch
+das Verzeichnis auf neue .dat-Dateien, um diese ggf. einzulesen.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Input-Ports
+</dt>
+<dd>
+<p>
+                keine&#8201;&#8212;&#8201;Das Verzeichnis zum Lesen wird in der Property <code>inputDirs</code> angegeben.
+</p>
+</dd>
+<dt class="hdlist1">
+Output-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>monitoringRecords</code>
+</dt>
+<dd>
+<p>
+Die gelesenen Records werden über diesen Output-Port weitergeleitet.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Properties
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>inputDirs</code>
+</dt>
+<dd>
+<p>
+Der Pfad zum Verzeichnis, das die .dat-Datei mit den Monitoring-Records im CSV-Form enthält.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ignoreUnknownRecordTypes</code>
+</dt>
+<dd>
+<p>
+Ist diese Property auf <code>false</code> gesetzt, so bricht die Analyse ab, wenn ein Record von unbekanntem Typ gelesen wird.<br />
+                <strong>Default</strong>: <code>false</code>
+</p>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</div></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong><span class="underline">RecordContentFilter</span></strong><a id="RCFilter"></a> (<code>org.oasp.module.monitoring.analysis.RecordContentFilter</code>)
+</dt>
+<dd>
+<p>
+Dieses Plugin dient der Filterung von <code>kieker.common.record.controlflow.<strong>OperationExecutionRecords</strong></code>
+anhand ihres Inhalts. Hierzu werden diese in der Array-Darstellung betrachtet, wie sie die <code>toArray()</code>-Methode produziert.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Input-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>recordsIn</code>
+</dt>
+<dd>
+<p>
+Empfängt Objekte vom Typ <code>kieker.common.record.controlflow.<strong>OperationExecutionRecord</strong></code>.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Output-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>recordsOutTrue</code>
+</dt>
+<dd>
+<p>
+Leitet jene Objekte weiter, für die die Filterbedingung zutrifft. (Die Vergleichsoperation ergibt <code>true</code>.)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>recordsOutFalse</code>
+</dt>
+<dd>
+<p>
+Leitet jene Objekte weiter, für die die Filterbedingung nicht zutrifft. (Die Vergleichsoperation ergibt <code>false</code>.)
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Properties
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>type</code>
+</dt>
+<dd>
+<p>
+Datentyp der Daten anhand derer gefiltert werden soll. Nur <code>NUMBER</code>, <code>BOOLEAN</code> und <code>STRING</code> sind gültig.<br />
+                <strong>Default</strong>: <code>STRING</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>compare</code>
+</dt>
+<dd>
+<p>
+Einer der sechs Vergleichsoperatoren. <code>GT</code> (&gt;), <code>LT</code> (&lt;), <code>GE</code> (&gt;=), <code>LE</code> (&lt;=), <code>EQ</code> (==) oder <code>NE</code> (!=).<br />
+                Für <code>type</code> = <code>NUMBER</code> sind alle Operatoren gültig.<br />
+                Für <code>type</code> = <code>BOOLEAN</code> sind nur <code>EQ</code> und <code>NE</code> gültig.<br />
+                Für <code>type</code> = <code>STRING</code> sind die Operatoren <code>GT</code> und <code>LE</code> ungültig; <code>EQ</code> bedeutet, dass der String des Records und der <code>filterKey</code> exakt gleich sein müssen; <code>NE</code> bedeutet, dass der String des Records
+                und der <code>filterKey</code> nicht exakt gleich sein dürfen; <code>GE</code> bedeutet, dass der String des Records den <code>filterKey</code> enthalten muss; <code>LT</code> bedeutet, dass der String des Records den <code>filterKey</code> nicht enthalten darf.<br />
+                <strong>Default</strong>: <code>EQ</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>arrayIndex</code>
+</dt>
+<dd>
+<p>
+Der Index, der angibt, an welcher Stelle der Array-Darstellung des Records das Datum liegt, das beim Filtern verglichen wird.<br />
+                <strong>Default</strong>: <code>0</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>filterKey</code>
+</dt>
+<dd>
+<p>
+Der Schlüssel, mit dem das gewählte Datum des Records verglichen wird. Er wird als Datentyp <code>type</code> interpretiert.<br />
+                <strong>Default</strong>: In Abhängigkeit von <code>type</code>&#8201;&#8212;&#8201;<code>0.0</code>, <code>true</code> oder ein leerer String.
+</p>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</div></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong><span class="underline">RecordResponseTimeProcessFilter</span></strong><a id="RRPFilter"></a> (<code>org.oasp.module.monitoring.analysis.RecordResponseTimeProcessFilter</code>)
+</dt>
+<dd>
+<p>
+Dieser Filter aggregiert die eingehenden
+<code>kieker.tools.opad.record.<strong>NamedDoubleRecord</strong></code>-Objekte über ein konfigurierbares, fließendes Zeitfenster. Aus ihren Responsetimes ermittelt er in wiederum konfigurierbaren Zeitabständen Anzahl, Minimum,
+Maximum, Median und Durchschnitt und sendet diese als <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code>-Objekte über fünf verschieden Ports weiter.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Input-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>inputRecords</code>
+</dt>
+<dd>
+<p>
+Empfängt Objekte vom Typ <code>kieker.tools.opad.record.<strong>NamedDoubleRecord</strong></code>.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Output-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>outputCount</code>
+</dt>
+<dd>
+<p>
+Leitet alle &lt;<code>deliverPeriodInMS</code>&gt; Millisekunden die Anzahl der betrachteten Records als <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code> weiter.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>outputMin</code>
+</dt>
+<dd>
+<p>
+Leitet alle &lt;<code>deliverPeriodInMS</code>&gt; Millisekunden die kürzeste Responsetime der betrachteten Records als <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code> weiter.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>outputMax</code>
+</dt>
+<dd>
+<p>
+Leitet alle &lt;<code>deliverPeriodInMS</code>&gt; Millisekunden die längste Responsetime der betrachteten Records als <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code> weiter.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>outputMedian</code>
+</dt>
+<dd>
+<p>
+Leitet alle &lt;<code>deliverPeriodInMS</code>&gt; Millisekunden den Median der Responsetimes der betrachteten Records als <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code> weiter.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>outputAvg</code>
+</dt>
+<dd>
+<p>
+Leitet alle &lt;<code>deliverPeriodInMS</code>&gt; Millisekunden die durchschnittliche Responsetime der betrachteten Records als <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code> weiter.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Properties
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>timeWindowInS</code>
+</dt>
+<dd>
+<p>
+Bestimmt das fließende Zeitfenster (in Sekunden), in dem eingegangene Records aggregiert werden. Das Zeitfenster reicht vom Timestamp des neuesten Records &lt;<code>timeWindowInS</code>&gt;
+                Sekunden in die Vergangenheit. Ältere Records werden verworfen.<br />
+                <strong>Default</strong>: 3600
+</p>
+</dd>
+<dt class="hdlist1">
+<code>maxRecords</code>
+</dt>
+<dd>
+<p>
+Anzahl der Records die maximal betrachtet werden. Liegen mehr als &lt;<code>maxRecords</code>&gt; Records im Zeitfenster, so werden die ältesten verworfen.<br />
+                <strong>Default</strong>: 100000
+</p>
+</dd>
+<dt class="hdlist1">
+<code>deliverPeriodInMS</code>
+</dt>
+<dd>
+<p>
+Frequenz (in Millisekunden) in der die Berechnungen stattfinden und die berechneten Daten versandt werden.<br />
+                <strong>Default</strong>: 5000
+</p>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</div></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong><span class="underline">TimeSeriesDisplayFilter</span></strong><a id="TSDFilter"></a> (<code>org.oasp.module.monitoring.analysis.TimeSeriesDisplayFilter</code>)
+</dt>
+<dd>
+<p>
+Dieses Plugin dient der visuellen Darstellung
+von <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code>-Objekten als Liniendiagramm. Hierzu können bis zu fünf verschiedene Serien/Linien in einem Diagramm dargestellt werden.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Input-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>inputSeriesA</code>
+</dt>
+<dd>
+<p>
+Der Port für <code>NamedDoubleTimeSeriesPoints</code> die in der ersten Serie dargestellt werden sollen.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>inputSeriesB</code>
+</dt>
+<dd>
+<p>
+Der Port für <code>NamedDoubleTimeSeriesPoints</code> die in der zweiten Serie dargestellt werden sollen.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>inputSeriesC</code>
+</dt>
+<dd>
+<p>
+Der Port für <code>NamedDoubleTimeSeriesPoints</code> die in der dritten Serie dargestellt werden sollen.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>inputSeriesD</code>
+</dt>
+<dd>
+<p>
+Der Port für <code>NamedDoubleTimeSeriesPoints</code> die in der vierten Serie dargestellt werden sollen.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>inputSeriesE</code>
+</dt>
+<dd>
+<p>
+Der Port für <code>NamedDoubleTimeSeriesPoints</code> die in der fünften Serie dargestellt werden sollen.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Output-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>relayedPoints</code>
+</dt>
+<dd>
+<p>
+Alle eingehenden <code>NamedDoubleTimeSeriesPoints</code> werden über diesen Port weitergeleitet.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Properties
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>seriesA</code>
+</dt>
+<dd>
+<p>
+Der im Diagramm dargestellte Name für die erste Serie.<br />
+                <strong>Default</strong>: series-A
+</p>
+</dd>
+<dt class="hdlist1">
+<code>seriesB</code>
+</dt>
+<dd>
+<p>
+Der im Diagramm dargestellte Name für die zweite Serie.<br />
+                <strong>Default</strong>: series-B
+</p>
+</dd>
+<dt class="hdlist1">
+<code>seriesC</code>
+</dt>
+<dd>
+<p>
+Der im Diagramm dargestellte Name für die dritte Serie.<br />
+                <strong>Default</strong>: series-C
+</p>
+</dd>
+<dt class="hdlist1">
+<code>seriesD</code>
+</dt>
+<dd>
+<p>
+Der im Diagramm dargestellte Name für die vierte Serie.<br />
+                <strong>Default</strong>: series-D
+</p>
+</dd>
+<dt class="hdlist1">
+<code>seriesE</code>
+</dt>
+<dd>
+<p>
+Der im Diagramm dargestellte Name für die fünfte Serie.<br />
+                <strong>Default</strong>: series-E
+</p>
+</dd>
+<dt class="hdlist1">
+<code>maxEntries</code>
+</dt>
+<dd>
+<p>
+Die maximale Anzahl von Punkten die pro Serie dargestellt werden.<br />
+                <strong>Default</strong>: 1000
+</p>
+</dd>
+<dt class="hdlist1">
+<code>timestampDisplayUnit</code>
+</dt>
+<dd>
+<p>
+Zeiteinheit, die auf der X-Achse dargestellt werden soll.<br />
+                <strong>Default</strong>: SECONDS
+</p>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</div></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong><span class="underline">JMXDataProviderFilter</span></strong><a id="JMXFilter"></a> (<code>org.oasp.module.monitoring.analysis.JMXDataProviderFilter</code>)
+</dt>
+<dd>
+<p>
+Dieses Plugin ist als MBean implementiert und dient der Bereitstellung einzelner Double-Werte
+für die JMX-Schnittstelle. Hierzu liest es den <code>value</code> eingehender <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code>-Objekte aus.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Input-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>inputData</code>
+</dt>
+<dd>
+<p>
+Empfängt Objekte vom Typ <code>kieker.tools.opad.record.<strong>NamedDoubleTimeSeriesPoint</strong></code>.
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Output-Ports
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>relayedData</code>
+</dt>
+<dd>
+<p>
+Leitet die eingehenden <code>NamedDoubleTimeSeriesPoints</code> unverändert weiter .
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Properties
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>valueName</code>
+</dt>
+<dd>
+<p>
+Bezeichnung des ausgelesenen Wertes, der über JMX bereitgestellt wird.<br />
+                <strong>Default</strong>: <code>&lt;unknown-data&gt;</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>domain</code>
+</dt>
+<dd>
+<p>
+Domain-Name der MBean.<br />
+                <strong>Default</strong>: <code>org.oasp.module.monitoring.analysis</code>
+</p>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="X25">3.5. Individuelle Lösungen</h3>
+<div class="paragraph"><p>Wenn die in Abschnitt <a href="#X24">3.4.</a> aufgeführten Plugins Deinen Ansprüchen nicht genügen, so muss eine individuelle Lösung gefunden werden. Hierzu kann zunächst ein Blick auf die von Kieker
+bereitgestellten Plugin-Klassen geworfen werden. Diese sind in der <a href="http://kieker-monitoring.net/api/1.9/">Kieker-API</a> einzusehen, doch ist die Dokumentation beim derzeitigen Stand (Kieker-1.9) noch
+nicht vollständig und u.U. kann eine selbst implementierte Klasse schneller zu einer guten Lösung führen.</p></div>
+<div class="paragraph"><p>Solltest Du Dich dafür entscheiden eigene Plugins zu schreiben, so kannst Du Dich an den Klassen im Package <code>org.oasp.module.monitoring.analysis</code> orientierten, die ausführlich im Javadoc dokumentiert
+sind. Außerdem ist bei der Implementierung von Plugins folgendes zu beachten:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+alle Plugin-Klassen müssen mit der Annotation <code><span class="gray">@Plugin</span></code> gekennzeichnet sein, in der Output-Ports und Properties definiert werden
+</p>
+</li>
+<li>
+<p>
+alle Reader-Plugins müssen von der Klasse <code>kieker.analysis.plugin.reader.<strong>AbstractReaderPlugin</strong></code> abgeleitet sein
+</p>
+</li>
+<li>
+<p>
+alle Filter-Plugins müssen von der Klasse <code>kieker.analysis.plugin.filter.<strong>AbstractFilterPlugin</strong></code> abgeleitet sein
+</p>
+</li>
+<li>
+<p>
+alle Filter-Plugins müssen mindestens eine Input-Methode haben, die mit der Annotation <code><span class="gray">@InputPort</span></code> gekennzeichnet ist
+</p>
+</li>
+<li>
+<p>
+alle Properties eines Plugins sollten immer über ein Objekt der Klasse <code>kieker.common.configuration.<strong>Configuration</strong></code> gesetzt werden
+</p>
+</li>
+<li>
+<p>
+alle Properties eines Plugins sollten immer mit der Methode <code>getCurrentConfiguration()</code> in einem Objekt der Klasse <code>kieker.common.configuration.<strong>Configuration</strong></code> zurückgegeben werden
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Eine ausführliche Anleitung zum Schreiben von Reader- und Filter-Plugins findet sich im Kapitel &#8222;4.2 Developing Analysis Plugins and Repositories&#8220; im <a href="http://kieker-monitoring.net/documentation/">Kieker-User-Guide</a>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="X26">3.6. Stand-Alone-Analyse mit dem &#8222;kax-run&#8220;-Skript</h3>
+<div class="paragraph"><p>Die in der Kieker-WebGUI erstellten Plugin-Netzwerke werden in <code>.kax</code>-Dateien gespeichert (abgelegt im Verzeichnis <code>kieker-webgui-1.9_binaries\bin\data\</code><code><strong>&lt;Dein_Projekt&gt;</strong></code>). Es ist möglich
+diese ohne die WebGUI zu starten. Dies macht natürlich nur Sinn, wenn die Ausgabe nicht auf Visualisierung innerhalb der WebGUI basiert. So z.B.
+beim <code>org.oasp.module.monitoring.analysis.<strong>JMXDataProviderFilter</strong></code>. Hierzu wird allerdings ein Skript aus dem <a href="http://kieker-monitoring.net/download/">Kieker-Release</a> benötigt.
+Einmal heruntergeladen und entpackt, findest du es unter <code>kieker-1.9\bin\</code><strong><code>kax-run.bat</strong></code>. Nun kannst Du mit folgendem Befehl dein <code>.kax</code>-File starten:</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph"><p><code>kax-run.bat -i &lt;Pfad zu Deinem .kax-File&gt;</code></p></div>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Wichtig</div>
+</td>
+<td class="content">Die Datei <code>performance-monitoring-1.0.jar</code> sowie alle <code>.jar</code>-Dateien, die etwaige verwendete Klassen enthalten, müssen dem Verzeichnis <code>kieker-1.9\lib</code> hinzugefügt werden.</td>
+</tr></table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_nützliche_links_und_literaturverweise">4. Nützliche Links und Literaturverweise</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+<a href="http://kieker-monitoring.net/documentation/">Kieker User Guide</a>&#8201;&#8212;&#8201;Kieker Project (Apr. 2014). Kieker 1.9 User Guide. Software Engineering Group, Kiel University, Kiel, Germany.
+</p>
+</li>
+<li>
+<p>
+<a href="http://kieker-monitoring.net/api/1.9/">Kieker-Online-API</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://kieker-monitoring.net/blog/everything-in-sight-kiekers-webgui-in-action/">Kieker Blog</a>&#8201;&#8212;&#8201;gibt einen Überblick über die Kieker-WebGUI.
+</p>
+</li>
+<li>
+<p>
+<a href="https://www.eclipse.org/aspectj/doc/next/progguide/language.html">AspectJ-Programmers-Guide</a>&#8201;&#8212;&#8201;erklärt die Pointcut-Expression-Language, derer Spring-AOP sich bedient.
+</p>
+</li>
+<li>
+<p>
+Stefan Eberlein. &#8222;<em>Erhebung und Analyse von Kennzahlen aus dem fachlichen Performance-Monitoring</em>&#8220;. Dimplomarbeit. Friedrich-Alexander-Universität Erlangen-Nürnberg, 2011&#8201;&#8212;&#8201;Bietet einen umfangreichen Überblick über das Thema.
+</p>
+</li>
+<li>
+<p>
+Johannes Mensing &#8222;<em>Methodische Vorgaben für Performance-Monitoring im Kontext betrieblicher Java-Anwendungen</em>&#8220;. Bachelorarbeit. Hochschule RheinMain Wiesbaden, 2014&#8201;&#8212;&#8201;Im Rahmen der Bachelorarbeit entstand diese Anleitung.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Version 1.0<br />
+Letzte Änderung 2014-09-10 08:58:05 W. Europe Daylight Time
+</div>
+</div>
+</body>
+</html>

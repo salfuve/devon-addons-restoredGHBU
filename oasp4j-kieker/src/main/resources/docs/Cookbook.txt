@@ -1,0 +1,549 @@
+﻿Anleitung zum Performance-Monitoring von Java-Anwendungen mit dem Kieker-Framework
+==================================================================================
+Johannes Mensing
+V1.0, August 2014
+:toc:
+:numbered:
+
+Einleitung
+----------
+Diese Anleitung ist entstanden, um einfaches Performance-Monitoring in kleinen und mittelgroßen Java-Projekten zu ermöglichen, ohne dabei einen unverhältnismäßig großen Aufwand betreiben zu müssen.
+Um einen genaueren Einblick in Kontext und Motivation dieser Arbeit zu bekommen, sieh Dir bitte die Powerpoint-Präsentation _Einfaches Performance-Monitoring von Java-Anwendungen_ von Thomas Maier an.
+
+Für die Entwicklung dieser Anleitung wurde Kieker-1.9 verwendet. Es ist möglich, dass zukünftige Releases kompatibel sind, dies ist aber nicht garantiert und muss getestet werden.
+Bei allen Fragen bezüglich Kieker ist immer ein Blick in den http://kieker-monitoring.net/documentation/[Kieker-User-Guide] empfehlenswert.
+
+Kieker ist unter der http://kieker-monitoring.net/license/[Apache License, Version 2.0] veröffentlicht und kann dementsprechend verwendet werden.
+
+Was diese Anleitung bietet
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+Das hier vorgestellte Verfahren zum Monitoring erlaubt eine kontinuierliche Erfassung von Monitoring-Daten wie Responsetime, Methodensignatur, Thread-ID oder Host-Name. Außerdem werden einige Daten
+-- wie etwa User-ID oder Session-ID -- erfasst, mit denen sich die gewonnenen Informationen in Bezug zu einem fachlichen Kontext setzen lassen. Die Daten werden von Messsonden erfasst
+-- sogenannte Monitoring-Probes -- die normalerweise per Spring-AOP in den Code integriert werden. Alternativ wird
+die Möglichkeit der manuellen Codeinstrumentierung vorgestellt. Die Monitoring-Probes können gezielt an kritischen Punkten platziert werden, doch haben Performance-Messungen gezeigt, dass auch
+großzügige bis vollständige Codeinstrumentierungen kaum messbaren Performance-Overhead produzieren. Zudem sind die Monitoring-Probes auch zur Laufzeit an- und abschaltbar. Die produzierten Daten
+werden als Textdateien im CSV-Format persistiert, die von Tools wie z.B. Excel ausgewertet werden können.
+
+Des Weiteren wird eine Möglichkeit zur Analyse der produzierten Daten unter Verwendung der Kieker-WebGUI aufgezeigt. Hiermit können die Daten beliebig gefiltert und Kennzahlen der Responsetimes
+-- Minimum, Maximum, Median und Durchschnitt -- ermittelt, visualisiert und bspw. für externe Tools über JMX bereitgestellt werden. Auch eine kontinuierliche Online-Analyse ist möglich.
+Da es sich bei der Analyse um ein plugin-basiertes Framework handelt, ist auch eine Erweiterung mit eigenen Plugins für individuelle Lösungen leicht umsetzbar.
+
+Was diese Anleitung nicht bietet
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Diese Anleitung liefert keine Konzept, wie die vom Monitoring erfassten Daten komprimiert oder anderweitig zusammengefasst werden können. D.h. es kann u.U. zu erheblichen Datenmengen kommen.
+Bei jeder in der Produktion laufenden Anwendung, die das hier vorgestellte Verfahren verwendet, sollte unbedingt darauf geachtet werden, die entstehenden Daten periodisch zu komprimieren und/oder
+zu löschen.
+
+Zur Bereitstellung des fachlichen Kontextes wird keine universelle Lösung geliefert, da dies in Anbetracht der Unterschiedlichkeit der möglichen Kontexte und Softwareprojekte nicht umzusetzen war.
+Stattdessen werden Beispielhafte Lösungen vorgestellt, die in vielen Fällen aber mit kleinen Anpassungen übernommen werden können. (Vergleiche <<X15,Abschnitt 2.1. Punkt 5>>.)
+
+Das hier beschriebene Verfahren wurde zur Anwendung in kleinen und mittelgroßen Projekten entwickelt. Es beschränkt sich deshalb auf lokale Systeme und bietet ``out of the Box'' keine Lösung für ein Monitoring
+von verteilten Systemen.
+
+Voraussetzungen
+~~~~~~~~~~~~~~~
+Um die in dieser Anleitung beschriebenen Verfahren einsetzen zu können, müssen die folgenden Voraussetzungen erfüllt sein:
+
+- Java 1.7 oder höher 
+- Kieker 1.9 (wird, bei Verwendung von Maven, transitiv über die Datei +performance-monitoring-1.0.jar+ eingebunden)
+- Spring-AOP (ist keine Voraussetzung für die <<manu-instr,manuelle Instrumentierung>>)
+
+Die Beispielklassen zur Bereitstellung des fachlichen Kontexts (+org.oasp.module.monitoring.*ContextProvider*+ und +org.oasp.module.monitoring.*ManualContextProvider*+; <<X15,s. Abschnitt 2.1. Punkt 5>>) verwenden außerdem: 
+
+- Spring 3.2.1
+- javax.servlet 2.3
+
+Übersichtsdiagramm +
+~~~~~~~~~~~~~~~~~~
+image::PM-Overview-color.png[]
+
+
+Monitoring
+----------
+Das folgende Kapitel gibt in Abschnitt <<basic,2.1.>> eine Schritt-für-Schritt-Anleitung, wie ein grundlegendes Performance-Monitoring eingerichtet werden kann.
+In Abschnitt <<manu-instr,2.2.>> wird eine alternative Möglichkeit der Codeinstrumentierung aufgezeigt. Die Abschnitte <<konf,2.3.>> - <<X13,2.6.>> befassen sich
+mit der Konfiguration sowie zusätzlichen Features des Monitorings.
+
+[[basic]]
+Einrichten des Basic Performance-Monitorings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Im Folgenden wird in wenigen Schritten erklärt wie ein grundlegendes Performance-Monitoring erreicht werden kann. Dies ist ein guter Einstieg in das Monitoring mit Kieker und kann später individualisiert und erweitert werden.
+
+1.	Füge folgende Zeilen der +pom.xml+ Deines Java-Projekts hinzu:
++
+-------------------------
+<dependency>
+  <groupId>org.oasp.module.monitoring</groupId>
+  <artifactId>performance-monitoring</artifactId>
+  <version>1.0</version>
+</dependency>
+-------------------------
++
+Solltest Du kein Maven verwenden, musst Du das jar-File +performance-monitoring-1.0.jar+ anderweitig dem Build-Path Deines Projekts hinzufügen.
++
+2.	Die Datei `resources\samples\`+*kieker.monitoring.properties*+ (aus der +performance-monitoring-1.0.jar+) muss in das +META-INF+ Verzeichnis Deines Projektes kopiert werden. In dieser Datei ist außerdem die Property +kieker.monitoring.writer.filesystem.AsyncFsWriter.customStoragePath+ auf den Verzeichnispfad zu setzten, in dem die Monitoring-Logs angelegt werden sollen.
+3.	Um den Programmcode mittels Spring-AOP mit Monitoring-Probes zu instrumentieren, muss die Datei `resources\samples\`+*performance-monitoring.xml*+ in alle Spring-``Application Contexts'' importiert werden, in denen das Monitoring verwendet werden soll. Im Fall einer Standardanwendung nach Vorgaben der OASP könnte das folgendermaßen aussehen:
+a.	Kopieren der Datei +performance-monitoring.xml+ in das Verzeichnis +<Dein_Projekt>\src\main\resources\resources\spring\crosscutting+.
+b.	Importieren der Datei +performance-monitoring.xml+ in beide vorhandenen ``Application Contexts'' durch Einfügen folgender Zeile …
++
+--------------------------
+<import resource="classpath:/resources/spring/crosscutting/performance-monitoring.xml" />
+--------------------------
++
+… in die Dateien +<Dein_Projekt>\src\main\resources\resources\spring\crosscutting.xml+ und +<Dein_Projekt>\src\main\resources\resources\spring\gui-flows.xml+.
++
+TIP: Alternativ (oder ergänzend) kann der Programmcode auch manuell instrumentiert werden. Siehe dazu Abschnitt <<manu-instr,2.2. Manuelle Instrumentierung>>.
++
+4.	Um zu bestimmen, welche Teile des Programmcodes grundsätzlich mit Monitoring-Probes versehen werden sollen, muss folgende Zeile aus der Datei +performance-monitoring.xml+ angepasst werden:
++
+--------------------------
+<aop:advisor order="1" advice-ref="monitoringProbe" pointcut="execution(public * com.capgemini.gastronomy.restaurant..*.*(..))" />
+--------------------------
++
+Das Attribut +pointcut+ bestimmt mit einem regulären Ausdruck, an welchen Methoden welcher Spring-Beans eine Monitoring-Probe gesetzt wird. +
++
+IMPORTANT: Die Zeile +<aop:config proxy-target-class="true">+ in dieser Datei sorgt dafür, dass CGLib-Proxies anstelle von JDK-Dynamic-Proxies verwendet werden.
+Dies ist wichtig, da JDK-Dynamic-Proxies nur für Interfaces erstellt werden können.
++
+NOTE: Zum genaueren Verständnis der regulären Ausdrücke, siehe Abschnitt <<X12,2.5. Pointcut-Expressions>>.
++
+NOTE: Für eine detailliertere Bestimmung, welche Monitoring-Probes ein- und welche ausgeschaltet werden sollen siehe Abschnitt <<X11,2.4. Aktivieren und Deaktivieren von Monitoring-Probes>>.
++
+5.	[[X15]]Als letzter Schritt muss nun noch ein Weg gefunden werden, die Daten des fachlichen Kontexts an einer Kontrollinstanz (+org.oasp.module.monitoring.*CustomControlFlowRegistry*+) zu registrieren.
+Dies muss in jedem Aufruf geschehen, bevor er die erste Monitoring-Probe durchläuft. Nur so ist gewährleistet, dass alle Probes immer auf den fachlichen Kontext des aktuellen Aufrufs zugreifen und die Messdaten später fachlich aggregiert und analysiert werden können.
+Zusätzlich muss auch am Ende jedes Aufrufs der fachliche Kontext wieder ``abgemeldet'' werden, um eine eindeutige Zuordnung der Daten sicherzustellen.
+{nbsp}
++
+Eine Beispiellösung für dieses Problem liefert die Klasse +org.oasp.module.monitoring.*ContextProvider*+. Diese kann über einen zweiten AOP-Advisor in der Datei +performance-monitoring.xml+ in den Code integriert werden:
++
+--------------------------
+<aop:advisor order="0" advice-ref="contextProvider" pointcut="execution(public * com.capgemini.gastronomy.restaurant.gui..*.*Controller.*(..))" />
+--------------------------
++
+Auch hier ist der reguläre Ausdruck der Pointcut-Expression anzupassen.
++
+IMPORTANT: Das Attribut +order=0+ sorgt dafür, dass an einem Pointcut, an dem sowohl Monitoring-Probe als auch +ContextProvider+ ausgeführt werden, letzterer zuerst durchlaufen wird.
+Dennoch musst Du mit der Pointcut-Expression selber dafür sorgen, dass er am Entrypoint jedes Aufrufs, der fachlich gemonitort werden soll, aufgerufen wird.
+
+Das Basic Performance-Monitoring ist nun eingerichtet und produziert während der Ausführung des überwachten Programms Monitoring-Records. Hierzu erstellt Kieker +.dat+-Dateien und legt diese
+in das von Dir in der Property +kieker.monitoring.writer.filesystem.AsyncFsWriter.customStoragePath+ angegebene Verzeichnis.
+In der +.dat+-Datei wird jeder Record im CSV(Comma Separated Values)-Format in einer Zeile dargestellt. Ein Beispiel könnte so aussehen (hier aus Platzgründen auf mehrere Zeilen verteilt)...
+---------------------------------------
+$1;1407402241982072647;public void com.capgemini.gastronomy.restaurant.persistence.common.AbstractRestaurantDao.delete(java.lang.Object);
+B263CD5C792468124DFB90166E35BD8A;3;1407402241974333720;1407402241982061097;CE08039;5;4;deleteTable@1407402241879;65078309;44;true
+---------------------------------------
+\... und ist folgendermaßen zu lesen: +
+Der erste Wert (+$0+ oder +$1+) gibt die Klasse des Monitoring-Records an. Diese werden in der parallel angelegten Datei +kieker.map+ festgehalten.
+Normalerweise steht +$1+ für den +kieker.common.record.misc.*KiekerMetadataRecord*+. Dieser kann in der http://kieker-monitoring.net/api/1.9/[Kieker-API] genauer betrachtet werden.
++$0+ steht für den +org.oasp.module.monitoring.*CustomOperationExecutionRecord*+; wie auch in diesem Beispiel.
+
+Seine Werte können wie folgt interpretiert werden:
+***************************************
+<RT>;<LT>;<MS>;<SID>;<TrID>;<Tin>;<Tout>;<HN>;<EOI>;<ESS>;<AID>;<UID>;<ThID>;<Suc> +
+***************************************
+[width="75%",cols="^.^4,^.^3,.^30", options="header"]
+|============================================
+|Kürzel|Fachlicher Kontext|Beschreibung 
+|<RT>|nein|_Record-Type_ (Klassenname des Records in +kieker.map+ wie oben beschrieben) 
+|<LT>|nein|_Logging-Timestamp_ 
+|<MS>|nein|_Method-Signature_ (Signatur der Methode an der die Monitoring-Probe angebracht ist)
+|<SID>|*ja*|_Session-ID_ 
+|<TrId>|nein|_Trace-ID_ (eine Korrelations-ID, über die Records einem Aufruf zugeordnet werden können)
+|<Tin>|nein|_Time-IN_ (Timestamp *vor* dem Methodeaufruf) 
+|<Tout>|nein|_Time-OUT_ (Timestamp *nach* dem Methodenaufruf) 
+|<HN>|nein|_Host-Name_ 
+|<EOI>|nein|_Execution Order Index_ (Index, der bei jeder Messsonde eines Aufrufs um eins erhöht wird) 
+|<ESS>|nein|_Execution Stack Size_ (gibt die Schachtelungstiefe des Aufrufs an)
+|<AID>|*ja*|_Action-ID_ (Use-Case-Name oder ID der Use-Case-Instanz) 
+|<UID>|*ja*|_User-ID_ 
+|<ThID>|nein|_Thread-ID_ 
+|<Suc>|nein|_Success_ (Indikator, ob die Methode fehlerlos beendet wurde)
+|=============================================
+CAUTION: Die ersten beiden Daten (<RT> & <LT>) kommen nicht aus der +toArray()+-Methode des Records. So würde man mit +<record>.toArray()[0]+ das Datum <MS> adressieren.
+
+[[manu-instr]]
+Manuelle Instrumentierung
+~~~~~~~~~~~~~~~~~~~~~~~~~
+Ist die Instrumentierung mit Spring-AOP nicht möglich oder unerwünscht, so können alternativ auch manuell Monitoring-Probes im Code integriert werden. Für diesen Zweck wurde die Klasse +org.oasp.module.monitoring.*ManualOperationExecutionProbe*+ implementiert.
+Wie diese Klasse zu verwenden ist, zeigt das folgenden Beispiel:
+
+Diese beispielhafte Methode soll überwacht werden:
+
+[source, java, numbered]
+---------------------------------------------------------------------
+ public boolean createTable(long id) throws ValidationException {
+
+    this.tableManagement.createTable(id);
+    this.LOG.debug("Restaurant table with id '" + id + "' will be created.");
+    return true;
+ }
+---------------------------------------------------------------------
+
+Hierzu wird zu Beginn der Methode die Methode +ManualOperationExecutionProbe.*before(String)*+ aufgerufen, um den Monitoring-Vorgang einzuleiten. Als Parameter benötigt sie die Signatur der überwachten Methode.
+Der ursprüngliche Code der überwachten Methode sollte von einem +try+-Block umschlossen werden, damit auch im Falle einer Exception der Monitoring-Vorgang abgeschlossen werden kann.
+Dies geschieht mit Hilfe der Methode +ManualOperationExecutionProbe.*after(MonitoringInfo)*+, die als Parameter das Ergebnis der +ManualOperationExecutionProbe.*before(String)*+-Methode benötigt. Zusätzlich muss ein Boolean übergeben werden, der angibt ob die Methode fehlerlos beendet wurde. 
+
+Eine manuelle Instrumentierung der Methode könnte also folgendermaßen aussehen:
+
+[source, java, numbered]
+--------------------------
+   String sigName = "public boolean createTable(long)";
+    try {
+      sigName = this.getClass().getDeclaredMethod("createTable", long.class).toString();
+    } catch (NoSuchMethodException | SecurityException e) {
+      this.LOG.warn("[MONITORING ISSUE] Method signature of class " + this.getClass().toString()
+          + " could not be obtained. Using shortened verion: '" + sigName + "'");
+    }
+    MonitoringInfo mInfo = ManualOperationExecutionProbe.before(sigName);
+    boolean success = false;
+    try {
+      this.tableManagement.createTable(id);
+      this.LOG.debug("Restaurant table with id '" + id + "' will be created.");
+      success = true;
+    } finally {
+      ManualOperationExecutionProbe.after(mInfo, success);
+    }
+    return true;
+  }
+--------------------------
+[CAUTION]
+==========================
+Den String-Parameter für die Methode +ManualOperationExecutionProbe.*before(String)*+ musst Du selber besorgen. Er muss einem String entsprechen, wie ihn die Methode
+http://docs.oracle.com/javase/7/docs/api/java/lang/reflect/Method.html#toString%28%29[+java.lang.reflect.Method.toString()+]
+produzieren würde. D.h. er muss folgende Syntax berücksichtigen:
+************************
+<Zugriffsmodifikator> <Rückgabetyp> <vollqualifizierte MethodenName>(<ParameterTypA>, <ParameterTypB, ...) [throws <throwable>]
+************************
+Andernfalls funktioniert das <<X11,Ein- und Ausschalten von Monitoring-Probes>> nicht. 
+Die Zeilen 1 - 7 zeigen eine beispielhafte Möglichkeit, diesen String zusammenzustellen.
+==========================
+TIP: Die manuelle Instrumentierung kann auch ergänzend zur Instrumentierung mit Spring-AOP genutzt werden, um z.B. Klassen, die keine Spring-Beans sind, zu monitoren.
+[[konf]]
+Konfiguration des Monitorings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Zur Konfiguration des Monitorings wird die Datei +kieker.monitoring.properties+ verwendet, die per Default im +META-INF+ Verzeichnis des Projekts liegen sollte.
+Obwohl sie ausführlich dokumentiert ist, soll hier kurz auf die wichtigsten Properties eingegangen werden:
+*******************************
+- +kieker.monitoring.enabled+ -- Sollte normalerweise +true+ sein. Andernfalls wird das Monitoring direkt nach dem Start der Anwendung abgeschaltet.
+- +kieker.monitoring.timer+	-- Sollte +kieker.monitoring.timer.SystemNanoTimer+ sein, da der +SystemMilliTimer+ in den meisten Fällen nicht präzise genug ist.
+- +kieker.monitoring.timer.SystemNanoTimer.unit+ -- Sollte immer +0+ sein, da einige Analyse-Plugins nur mit Nanosekunden arbeiten können.
+- +kieker.monitoring.writer+ -- Sollte +kieker.monitoring.writer.filesystem.AsyncFsWriter+ sein, da die Analyse auf diesen Writer abgestimmt ist.
+- +kieker.monitoring.writer.filesystem.AsyncFsWriter.QueueSize+ -- Produziert das Monitoring zeitweise zu viele Monitoring-Records, kann über diese Property die Größe des Buffers angepasst werden.
+- +kieker.monitoring.writer.filesystem.AsyncFsWriter.QueueFullBehavior+	-- Normalerweise +0+. Sollte der interne Buffer aufgrund von zu vielen Records überlaufen, kann diese Property auf +2+ gesetzt werde. Dann werden allerdings die überzähligen Records verworfen. Diese Property sollte nicht auf +1+ gesetzt werden, da der Writer sonst nicht mehr asynchron arbeitet und die Anwendung erheblich verlangsamen kann.
+*******************************
+NOTE: Bei Datei `resources\samples\`+*kieker.monitoring.properties*+ handelt es sich um eine gekürzte Form des von Kieker mitgelieferten Originals. Solltest Du Dich dazu entscheiden, die Analyse selber in die Hand zu nehmen und
+den +kieker.monitoring.writer.filesystem.AsyncFsWriter+ durch einen anderen zu ersetzen, empfehle ich das Original heranzuziehen, das in jedem http://kieker-monitoring.net/download/[Release von Kieker] enthalten ist.
+
+[[X11]]
+Aktivieren und Deaktivieren von Monitoring-Probes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Um Monitoring-Probes zur Laufzeit zu aktivieren oder zu deaktivieren, kann eine Pattern-List in der Datei +kieker.monitoring.adaptiveMonitoring.conf+ verwendet werden.
+Hierzu müssen folgende Properties in der Datei +kieker.monitoring.properties+ gesetzt werden:
+--------------------------------
+kieker.monitoring.adaptiveMonitoring.enabled=true
+...
+kieker.monitoring.adaptiveMonitoring.configFile=<Pfad zur Datei>
+...
+kieker.monitoring.adaptiveMonitoring.readInterval=30
+--------------------------------
+Die erste Property schaltet das adaptive Monitoring ein. In der Zweiten ist der Pfad zur Datei +kieker.monitoring.adaptiveMonitoring.conf+ anzugeben. Mit der Dritten kann das Poll-Intervall in Sekunden festgelegt werden. 
+
+Die Syntax der Pattern-List ist in der Datei +kieker.monitoring.adaptiveMonitoring.conf+ mit einigen Beispielen erklärt.
+
+Alternativ können Monitoring-Probes auch über den <<X13,Zugriff auf den Monitoring-Controller via JMX>> ein- und ausgeschaltet werden.
+
+[[X12]]
+Pointcut-Expressions
+~~~~~~~~~~~~~~~~~~~~
+In der Datei +performance-monitoring.xml+ wird mittels Pointcut-Expressions bestimmt, welche Methoden welcher Spring-Beans durch das Monitoring überwacht werden.
+Diese Pointcut-Expressions verwenden die AspectJ-Pointcut-Expression-Language, die im https://www.eclipse.org/aspectj/doc/next/progguide/language.html[AspectJ Programmers Guide] näher beschrieben ist.
+
+[[X13]]
+Zugriff auf den Monitoring-Controller via JMX
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Auf den Monitoring-Controller von Kieker kann als MBean über JMX zugegriffen werden. Auf diese Weise kann beispielsweise zur Laufzeit das gesamte Monitoring oder einzelne Probes ein- und ausgeschaltet werden.
+Hierzu müssen die folgenden Properties in der  Datei +kieker.monitoring.properties+ gesetzt werden:
+--------------------------------
+kieker.monitoring.jmx=true
+...
+kieker.monitoring.jmx.MonitoringController=true
+--------------------------------
+Nun kann z.B. JConsole verwendet werden, um auf den Monitoring-Controller zuzugreifen. Dabei ist zu beachten, dass Kieker zum Classpath von JConsole hinzugefügt wird.
+Eine detailliertere Erläuterung findest Du im http://kieker-monitoring.net/documentation/[Kieker-User-Guide].
+
+Individuelle Anpassung des Monitorings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Sollten Dir die vom Monitoring festgehaltenen Daten nicht umfangreich genug sein, so kannst Du es um zusätzliche Daten erweitern.
+Hierzu sollten zunächst die Klassen +org.oasp.module.monitoring.*CustomOperationExecutionRecord*+ und +org.oasp.module.monitoring.*CustomOperationExecutionMethodInvocationInterceptor*+
+(bzw. +org.oasp.module.monitoring.*ManualOperationExecutionProbe*+ im Falle von manueller Instrumentierung) betrachtet und erweitert werden.
+
+Sollte es sich bei den neuen Daten um fachlichen Kontext handeln, so muss außerdem die Klasse +org.oasp.module.monitoring.*CustomControlFlowRegistry*+ erweitert werden
+und auch bei der Registrierung des fachlichen Kontexts an der Instanz dieser Klasse müssen die neuen Daten berücksichtigt werden (<<X15,s. Abschn. 2.1. Punkt 5>>).
+
+NOTE: Einige der genannten Klassen lassen sich nicht oder nur sehr umständlich im Sinne von "+extend+" erweitern. In diesen Fällen muss leider auf das Prinzip
+des Kopierens und Ergänzens zurückgegriffen werden.
+
+Analyse
+-------
+Die vom Monitoring produzierten Monitoring-Records im CSV Format können mit Tools wie z.B. Excel ausgewertet werden.
+Diese Anleitung beschreibt in Abschnitt <<X21,3.1.>> - <<X23,3.3.>> zusätzlich, wie eine grundlegende Analyse mit Hilfe des plugin-basierten ``Pipe-and-Filter Frameworks'' und der WebGUI von Kieker
+durchgeführt werden kann. Hierzu werden eine Reihe von fertigen Plugins bereitgestellt, die in Abschnitt <<X24,3.4.>> dokumentiert sind. In Abschnitt <<X25,3.5.>> wird außerdem beschrieben, wie
+das Framework um selbstgeschriebene Plugins schnell erweitert werden kann, um individuelle Lösungen zu ermöglichen. Abschnitt <<X26,3.6.>> erläutert wie eine Analyse ohne die WebGUI durchgeführt werden kann.
+
+[[X21]]
+Das Pipe-and-Filter Framework
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Das Package +Kieker.Analysis+ stellt ein plugin-basiertes Framework zur Verfügung, das eine individuell konfigurier- und erweiterbare Analyse ermöglicht.
+Hierbei speist immer ein Reader-Plugin -- das Monitoring-Records in irgendeiner Form einliest -- Records in ein Netzwerk aus mehreren Filter-Plugins, die die Records dann
+weiterverarbeiten, aggregieren, analysieren, visualisieren oder auch für externe Schnittstellen bereitstellen. Allen Filter-Plugins ist gemein, dass sie immer über mindestens einen Input-Port
+verfügen, über den sie Records oder andere Objekte, die bei der Weiterverarbeitung der Records entstehen, empfangen können. Die meisten verfügen außerdem über mindestens einen Output-Port,
+der zur Weiterleitung von Daten an andere Plugins dient.
+
+Für eine detailliertere Beschreibung ziehe bitte den http://kieker-monitoring.net/documentation/[Kieker-User-Guide] zu Rate. 
+
+[[X22]]
+Die Kieker-WebGUI
+~~~~~~~~~~~~~~~~~
+Das Erstellen, Konfigurieren und Ausführen der Plugin-Netzwerke kann zwar unter Verwendung einer Java-API erfolgen, doch ist dies mühsam und fehleranfällig. Deshalb
+soll in diesem Guide die Kieker-WebGUI zur Analyse verwendet werden, die zu eben diesem Zweck von Kieker entwickelt wird. Zum derzeitigen Stand (Kieker-1.9) befindet sich die WebGUI noch in
+der Beta-Phase, doch sind die wichtigen Funktionalitäten schon ausreichend implementiert, um brauchbare Ergebnisse zu erzielen und mit einer ausführlichen Weiterentwicklung ist zu rechnen.
+
+Im  http://kieker-monitoring.net/blog/everything-in-sight-kiekers-webgui-in-action/[Kieker Blog] kann ein ausführlicherer Überblick über die WebGUI gewonnen werden.
+
+[[X23]]
+Erstellung eines beispielhaften Plugin-Netzwerks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Im folgenden wird unter Verwendung der Kieker-WebGUI ein Beispielhaftes Plugin-Netzwerk erstellt, um die Verwendung der WebGUI zu verdeutlichen.
+
+1. Entpacke das +kieker-webgui-1.9_binaries.zip+-File in ein beliebiges Verzeichnis.
+2. Führe das Skript `kieker-webgui-1.9_binaries\bin\`+*Kieker.WebGUI.bat*+ aus, um die WebGUI zu starten. (Dies kann einige Sekunden dauern.)
+3. Gib folgende URL http://localhost:8080/Kieker.WebGUI/login in Deinen Webbrowser ein.
+4. Logge Dich mit dem Benutzernamen ``admin'' und dem Passwort ``kieker'' ein.
+5. Klicke oben links auf ``Datei'' -> ``Neues Projekt'', um ein Projekt mit beliebigem Namen zu erstellen; im Folgenden als +<Dein_Projekt>+ bezeichnet. +
+	Es wurde nun ein Verzeichnis `kieker-webgui-1.9_binaries\bin\data\`+*<Dein_Projekt>*+ erstellt.
+6. Klicke nun unter http://localhost:8080/Kieker.WebGUI/pages/ auf <Dein_Projekt> -> ``Analyse Editor''. Nun siehst Du die Seite, auf der Plugin-Netzwerke zusammengestellt werden können.
+7. Importiere jetzt die Datei +performance-monitoring-1.0.jar+ in Dein Projekt. Hierzu klickst Du oben links auf ``Datei'' -> ``Bibliotheken Verwalten''  und im daraufhin erscheinenden Popup
+auf ``Durchsuchen''. Wähle jetzt die eben genannte Datei aus. Damit ist gewährleistet, dass Dein Projekt über die eigens für diese Anleitung geschriebenen Klassen verfügt.
++
+TIP: Alternativ können .jar-Datein, die Klassen zur Analyse enthalten, auch in das Verzeichnis `kieker-webgui-1.9_binaries\bin\data\<Dein_Projekt>\`+*lib+* kopiert werden.
++
+8. Durch klicken auf Plugins im Bereich ``Verfügbare Plugins'' auf der Linken Seite, fügst Du sie Deinem Plugin-Netzwerk hinzu. Klicke zunächst auf +FSReader+. Dieser erscheint nun
+als graues Rechteck im Haupt-Widget und lässt sich durch Ziehen mit der Maus positionieren.
++
+NOTE: Über das Kästchen mit der Aufschrift ``Globale Konfiguration'' lässt sich die Zeiteinheit der Monitoring-Records angeben; in fast allen Fällen kann es beim Default +NANOSECONDS+ belassen werden.
++
+9. Klicke auf den +FSReader+ im Haupt-Widget, um im unteren Bereich seine Properties einzublenden. Hier kann jedes Plugin konfiguriert werden. Gib für die Property +inputDirs+ des +FSReader+
+	den Pfad zu dem Verzeichnis an, in dem sich die zu analysierenden Monitoring-Records befinden.
++
+IMPORTANT: Es muss das Verzeichnis sein, in dem sich die +.map+ und +.dat+ Dateien befinden. Nicht etwa ein Parent-Verzeichnis!
++
+10. Füge nun einen +RecordContentFilter+ Deinem Plugin-Netzwerk hinzu. Dieser filtert +OperationExecutionRecords+ anhand ihres Inhalts; z.B. der Methodensignatur.
+11. Verbinde durch Anklicken den Output-Port des +FSReader+ mit dem Input-Port des +RecordContentFilter+.
+12. Setze nun die Properties des +RecordContentFilter+ wie folgt:
+- type: +STRING+
+- compare: +GE+	(dies entspricht für Strings einem 'contains')
+- arrayIndex: +0+ (am Index 0 befindet sich in der Array-Darstellung des Records normalerweise die Methodensignatur)
+- filterKey: <Ein Teil der Methodensignatur, die alle Records enthalten sollen, die Du herausfiltern möchtest. Z.B. +com.capgemini.gastronomy.restaurant.+>
++
+TIP: Die Symbolleiste des Analyse Editors verfügt über einen Button zur automatischen Anordnung der Plugins. (``Layoutet den Graphen'')
++
+13. Füge als nächstes einen +RecordConverter+ hinzu und verbinde seinen Input-Port mit dem Output-Port +recordsOutTrue+ des +RecordContentFilter+.
+Dieser wandelt die Records in Objekte der Klasse +kieker.tools.opad.record.*NamedDoubleRecord*+ um -- eine abstraktere Klasse, die nur noch Timestamp und Responsetime des Records enthält.
+Hierzu müssen keine Properties gesetzt werden.
+14. Als nächstes muss dem Netzwerk ein +RecordResponseTimeProcessFilter+ hinzugefügt werden. Verbinde seinen Input-Port mit dem Output-Port des +RecordConverter+ und belasse seine Properties wie voreingestellt.
+Der +RecordResponseTimeProcessFilter+ aggregiert nun die ankommenden +NamedDoubleRecords+ und berechnet aus diesen Anzahl, Minimum, Maximum, Median und Durchschnitt der Antwortzeiten.
+Die Ergebnisse sendet er alle fünf Sekunde (Property ``deliverPeriodInMS'' = +5000+) über die fünf Output-Ports weiter.
+15. Die vom +RecordResponseTimeProcessFilter+ berechneten Werte lassen sich mit einem +TimeSeriesDisplayFilter+ in der WebGUI visualisieren. Füge einen solchen Deinem Plugin-Netzwerk hinzu und
+verbinde den Output-Port +outputAvg+ des +RecordResponseTimeProcessFilter+ (dieser überträgt den Durchschnittswert) mit einem der Input-Ports des +TimeSeriesDisplayFilter+.
+Setze nun die Property des entsprechenden Input-Ports des +TimeSeriesDisplayFilter+ auf ``average'', um zu benennen *was* diese Serie darstellt. D.h. wenn Du die Verbindungslinie z.B. zum
+Input-Port +inputSeriesA+ gezogen hast, solltest Du die für die Property +seriesA+ ``average'' eingeben. 
+16. Dein erstes Plugin-Netzwerk ist nun fertig und betriebsbereit. Klicke auf das Diskettensymbol oben links, um Dein Projekt zu speichern. Die folgende Grafik zeigt, wie das ganze in etwa
+aussehen sollte:
++
+image::SS-netzwerk_example.png[]
++
+17. Um eine Visualisierung der +TimeSeriesDisplayFilter+ zu ermöglichen, muss diese noch im ``Cockpit Editor'' eingerichtet werden (Button oben rechts).
+18. Der Cockpit Editor dient der Konfiguration der Visualisierung, wie sie später im Cockpit-Bereich zu sehen ist. In unserem Fall verfügt nur der
++TimeSeriesDisplayFilter+ über eine Visualisierung. Klicke zunächst oben links auf ``Datei'' -> ``Neue Ansicht'', um eine neue Ansicht zu erstellen. Klicke dann links auf den Namen der gerade
+erstellten Ansicht und auf ``Ansicht Selektieren'', um sie auszuwählen.
+19. Füge nun das ``XYPlot Display'' des +TimeSeriesDisplayFilter+ der Ansicht hinzu, indem Du rechts auf +TimeSeriesDisplayFilter+ -> ``XYPlot Display'' klickst.
+Optional kannst Du dem Display noch einen Namen geben, durch setzen der Property ``Name'' im unteren Bereich.
+20. Speichere Dein Projekt erneut durch Anklicken des Diskettensymbols.
+21. Wechsle zur Analyse-Ansicht mit dem Button ``Analyse'' oben rechts.
+22. Klicke unten auf ``Analyse Instanziieren'' gefolgt von ``Analyse Starten'', um die Analyse zu starten.
+23. Wechsle nun in die ``Cockpit''-Ansicht und wähle die von Dir erstellte Ansicht aus, um das Ergebnis Deiner Analyse zu betrachten. Je nach verwendeten Monitoring-Daten sollte Deine
+Visualisierung der folgenden Grafik mehr oder weniger ähneln:
++
+image::SS-xyplot-example.png[]
++
+NOTE: Du solltest die Analyse in der Analyse-Ansicht immer zurücksetzen, bevor Du eine neue konfigurierst oder startest.
+
+[[X24]]
+Übersicht der bereitgestellten Plugin-Klassen
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Im folgenden findest Du eine Übersicht der wichtigsten Filter-Plugins, die für die Analyse mit dem ``Pipe-and-Filter Framework'' empfohlen werden. Mit Hilfe dieser Plugins ist eine grundlegende
+Analyse bereits möglich. So können Records, die von der Klasse +kieker.common.record.controlflow.*OperationExecutionRecord*+ erben, mit dem <<RCFilter,*RecordContentFilter*>> nach jeglichem Inhalt
+gefiltert werden. Mit dem <<RRPFilter, *RecordResponseTimeProcessFilter*>> lassen sich die gefilterten Daten dann aggregieren und zu Kennzahlen zusammenfassen. Diese Kennzahlen können dann mit
+dem <<TSDFilter,*TimeSeriesDisplayFilter*>> in der WebGUI visualisiert und/oder mit dem <<JMXFilter,*JMXDataProviderFilter*>> über JMX bereitgestellt werden, um mit externen Monitoring-Tools darauf zuzugreifen.
+
+Kieker stellt noch eine Reihe weiterer Plugins -- die in der WebGUI auch aufgelistet sind -- zur Verfügung. Diese können in der http://kieker-monitoring.net/api/1.9/[Kieker-API] nachgeschlagen
+werden, sind aber zum derzeitigen Stand (Kieker-1.9) nur spärlich dokumentiert.
+*******************************
+[underline]*FSReader*[[FSReader]] (+kieker.analysis.plugin.reader.filesystem.FSReader+):: Dies ist der von Kieker bereitgestellte Standardreader für die offline Analyse. Er sollte verwendet werden, wenn während
+der Analyse keinen neuen Monitoring-Records zu erwarten sind; diese würde er einfach ignorieren. Er wandelt die in der .dat-Datei gefundenen Records wieder in Java-Objekte um und sendet sie weiter.
+	Input-Ports;; 
+		keine -- Das Verzeichnis zum Lesen wird in der Property +inputDirs+ angegeben.
+	Output-Ports;; 
+		+monitoringRecords+::: Die gelesenen Records werden über diesen Output-Port weitergeleitet.
+	Properties;; 
+		+inputDirs+::: Der Pfad zum Verzeichnis, das die .dat-Datei mit den Monitoring-Records im CSV-Form enthält.
+		+ignoreUnknownRecordTypes+::: Ist diese Property auf +false+ gesetzt, so bricht die Analyse ab, wenn ein Record von unbekanntem Typ gelesen wird. +
+		*Default*: +false+
+*******************************
+*******************************
+[underline]*RecordConverter* (+org.oasp.module.monitoring.analysis.RecordConverter+):: Dieses Plugin wandelt eingehende Objekte vom Typ +kieker.common.record.controlflow.*OperationExecutionRecord*+ (oder abgeleitete Klassen)
+in Objekte vom Typ +kieker.tools.opad.record.*NamedDoubleRecord*+ um. Diese enthalten nur noch Timestamp und Responsetime und können vom <<RRPFilter,*RecordResponseTimeProcessFilter*>> verarbeitet werden.
+	Input-Ports;; 
+		+oer+::: Empfängt Objekte vom Typ +kieker.common.record.controlflow.*OperationExecutionRecord*+.
+	Output-Ports;; 
+		+ndr+::: Leitet Objekte vom Typ +kieker.tools.opad.record.*NamedDoubleRecord*+ weiter.
+	Properties;; 
+		keine
+*******************************		
+TIP: Die folgenden Filter-Plugins sind eigens für diese Anleitung geschrieben worden und sind zusätzlich ausführlich im JavaDoc der Datei +performance-monitoring-1.0.jar+ dokumentiert.
+*******************************
+[underline]*OnlineFSReader* (+org.oasp.module.monitoring.analysis.OnlineFSReader+):: Dieser Reader ist eine Erweiterung des <<FSReader,*FSReader*>>
+und ist dafür konzipiert, eine kontinuierliche Analyse während des Monitorings zu ermöglichen. Findet er keine weiteren Record-Einträge in einer .dat-Datei, so wartet er auf neue und überprüft auch
+das Verzeichnis auf neue .dat-Dateien, um diese ggf. einzulesen.
+	Input-Ports;; 
+		keine -- Das Verzeichnis zum Lesen wird in der Property +inputDirs+ angegeben.
+	Output-Ports;; 
+		+monitoringRecords+::: Die gelesenen Records werden über diesen Output-Port weitergeleitet.
+	Properties;; 
+		+inputDirs+::: Der Pfad zum Verzeichnis, das die .dat-Datei mit den Monitoring-Records im CSV-Form enthält.
+		+ignoreUnknownRecordTypes+::: Ist diese Property auf +false+ gesetzt, so bricht die Analyse ab, wenn ein Record von unbekanntem Typ gelesen wird. +
+		*Default*: +false+
+*******************************
+*******************************
+[underline]*RecordContentFilter*[[RCFilter]] (+org.oasp.module.monitoring.analysis.RecordContentFilter+):: Dieses Plugin dient der Filterung von +kieker.common.record.controlflow.*OperationExecutionRecords*+
+anhand ihres Inhalts. Hierzu werden diese in der Array-Darstellung betrachtet, wie sie die +toArray()+-Methode produziert.
+	Input-Ports;; 
+		+recordsIn+::: Empfängt Objekte vom Typ +kieker.common.record.controlflow.*OperationExecutionRecord*+.
+	Output-Ports;; 
+		+recordsOutTrue+::: Leitet jene Objekte weiter, für die die Filterbedingung zutrifft. (Die Vergleichsoperation ergibt +true+.)
+		+recordsOutFalse+::: Leitet jene Objekte weiter, für die die Filterbedingung nicht zutrifft. (Die Vergleichsoperation ergibt +false+.)
+	Properties;; 
+		+type+::: Datentyp der Daten anhand derer gefiltert werden soll. Nur +NUMBER+, +BOOLEAN+ und +STRING+ sind gültig. +
+		*Default*: +STRING+
+		+compare+::: Einer der sechs Vergleichsoperatoren. +GT+ (>), +LT+ (<), +GE+ (>=), +LE+ (\<=), +EQ+ (==) oder +NE+ (!=). +
+		Für +type+ = +NUMBER+ sind alle Operatoren gültig. +
+		Für +type+ = +BOOLEAN+ sind nur +EQ+ und +NE+ gültig. + 
+		Für +type+ = +STRING+ sind die Operatoren +GT+ und +LE+ ungültig; +EQ+ bedeutet, dass der String des Records und der +filterKey+ exakt gleich sein müssen; +NE+ bedeutet, dass der String des Records
+		und der +filterKey+ nicht exakt gleich sein dürfen; +GE+ bedeutet, dass der String des Records den +filterKey+ enthalten muss; +LT+ bedeutet, dass der String des Records den +filterKey+ nicht enthalten darf. +
+		*Default*: +EQ+
+		+arrayIndex+::: Der Index, der angibt, an welcher Stelle der Array-Darstellung des Records das Datum liegt, das beim Filtern verglichen wird. +
+		*Default*: +0+
+		+filterKey+::: Der Schlüssel, mit dem das gewählte Datum des Records verglichen wird. Er wird als Datentyp +type+ interpretiert. +
+		*Default*: In Abhängigkeit von +type+ -- +0.0+, +true+ oder ein leerer String.
+*******************************
+*******************************		
+[underline]*RecordResponseTimeProcessFilter*[[RRPFilter]] (+org.oasp.module.monitoring.analysis.RecordResponseTimeProcessFilter+):: Dieser Filter aggregiert die eingehenden
++kieker.tools.opad.record.*NamedDoubleRecord*+-Objekte über ein konfigurierbares, fließendes Zeitfenster. Aus ihren Responsetimes ermittelt er in wiederum konfigurierbaren Zeitabständen Anzahl, Minimum,
+Maximum, Median und Durchschnitt und sendet diese als +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+-Objekte über fünf verschieden Ports weiter.
+	Input-Ports;; 
+		+inputRecords+::: Empfängt Objekte vom Typ +kieker.tools.opad.record.*NamedDoubleRecord*+.
+	Output-Ports;; 
+		+outputCount+::: Leitet alle <++deliverPeriodInMS++> Millisekunden die Anzahl der betrachteten Records als +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+ weiter.
+		+outputMin+::: Leitet alle <++deliverPeriodInMS++> Millisekunden die kürzeste Responsetime der betrachteten Records als +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+ weiter.
+		+outputMax+::: Leitet alle <++deliverPeriodInMS++> Millisekunden die längste Responsetime der betrachteten Records als +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+ weiter.
+		+outputMedian+::: Leitet alle <++deliverPeriodInMS++> Millisekunden den Median der Responsetimes der betrachteten Records als +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+ weiter.
+		+outputAvg+::: Leitet alle <++deliverPeriodInMS++> Millisekunden die durchschnittliche Responsetime der betrachteten Records als +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+ weiter.
+	Properties;; 
+		+timeWindowInS+::: Bestimmt das fließende Zeitfenster (in Sekunden), in dem eingegangene Records aggregiert werden. Das Zeitfenster reicht vom Timestamp des neuesten Records <++timeWindowInS++>
+		Sekunden in die Vergangenheit. Ältere Records werden verworfen. +
+		*Default*: 3600
+		+maxRecords+::: Anzahl der Records die maximal betrachtet werden. Liegen mehr als <++maxRecords++> Records im Zeitfenster, so werden die ältesten verworfen. +
+		*Default*: 100000
+		+deliverPeriodInMS+::: Frequenz (in Millisekunden) in der die Berechnungen stattfinden und die berechneten Daten versandt werden. +
+		*Default*: 5000
+*******************************
+*******************************		
+[underline]*TimeSeriesDisplayFilter*[[TSDFilter]] (+org.oasp.module.monitoring.analysis.TimeSeriesDisplayFilter+):: Dieses Plugin dient der visuellen Darstellung
+von +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+-Objekten als Liniendiagramm. Hierzu können bis zu fünf verschiedene Serien/Linien in einem Diagramm dargestellt werden.
+	Input-Ports;; 
+		+inputSeriesA+::: Der Port für +NamedDoubleTimeSeriesPoints+ die in der ersten Serie dargestellt werden sollen.
+		+inputSeriesB+::: Der Port für +NamedDoubleTimeSeriesPoints+ die in der zweiten Serie dargestellt werden sollen.
+		+inputSeriesC+::: Der Port für +NamedDoubleTimeSeriesPoints+ die in der dritten Serie dargestellt werden sollen.
+		+inputSeriesD+::: Der Port für +NamedDoubleTimeSeriesPoints+ die in der vierten Serie dargestellt werden sollen.
+		+inputSeriesE+::: Der Port für +NamedDoubleTimeSeriesPoints+ die in der fünften Serie dargestellt werden sollen.
+	Output-Ports;;
+		+relayedPoints+::: Alle eingehenden +NamedDoubleTimeSeriesPoints+ werden über diesen Port weitergeleitet.
+	Properties;; 
+		+seriesA+::: Der im Diagramm dargestellte Name für die erste Serie. +
+		*Default*: series-A
+		+seriesB+::: Der im Diagramm dargestellte Name für die zweite Serie. +
+		*Default*: series-B
+		+seriesC+::: Der im Diagramm dargestellte Name für die dritte Serie. +
+		*Default*: series-C
+		+seriesD+::: Der im Diagramm dargestellte Name für die vierte Serie. +
+		*Default*: series-D
+		+seriesE+::: Der im Diagramm dargestellte Name für die fünfte Serie. +
+		*Default*: series-E
+		+maxEntries+::: Die maximale Anzahl von Punkten die pro Serie dargestellt werden. +
+		*Default*: 1000
+		+timestampDisplayUnit+::: Zeiteinheit, die auf der X-Achse dargestellt werden soll. +
+		*Default*: SECONDS
+*******************************
+*******************************
+[underline]*JMXDataProviderFilter*[[JMXFilter]] (+org.oasp.module.monitoring.analysis.JMXDataProviderFilter+):: Dieses Plugin ist als MBean implementiert und dient der Bereitstellung einzelner Double-Werte
+für die JMX-Schnittstelle. Hierzu liest es den +value+ eingehender +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+-Objekte aus.
+	Input-Ports;; 
+		+inputData+::: Empfängt Objekte vom Typ +kieker.tools.opad.record.*NamedDoubleTimeSeriesPoint*+.
+	Output-Ports;; 
+		+relayedData+::: Leitet die eingehenden +NamedDoubleTimeSeriesPoints+ unverändert weiter .
+	Properties;; 
+		+valueName+::: Bezeichnung des ausgelesenen Wertes, der über JMX bereitgestellt wird. +
+		*Default*: +<unknown-data>+
+		+domain+::: Domain-Name der MBean. +
+		*Default*: +org.oasp.module.monitoring.analysis+
+*******************************		
+[[X25]]
+Individuelle Lösungen
+~~~~~~~~~~~~~~~~~~~~~
+Wenn die in Abschnitt <<X24,3.4.>> aufgeführten Plugins Deinen Ansprüchen nicht genügen, so muss eine individuelle Lösung gefunden werden. Hierzu kann zunächst ein Blick auf die von Kieker
+bereitgestellten Plugin-Klassen geworfen werden. Diese sind in der http://kieker-monitoring.net/api/1.9/[Kieker-API] einzusehen, doch ist die Dokumentation beim derzeitigen Stand (Kieker-1.9) noch
+nicht vollständig und u.U. kann eine selbst implementierte Klasse schneller zu einer guten Lösung führen.
+
+Solltest Du Dich dafür entscheiden eigene Plugins zu schreiben, so kannst Du Dich an den Klassen im Package +org.oasp.module.monitoring.analysis+ orientierten, die ausführlich im Javadoc dokumentiert
+sind. Außerdem ist bei der Implementierung von Plugins folgendes zu beachten:
+
+- alle Plugin-Klassen müssen mit der Annotation [gray]+@Plugin+ gekennzeichnet sein, in der Output-Ports und Properties definiert werden
+- alle Reader-Plugins müssen von der Klasse +kieker.analysis.plugin.reader.*AbstractReaderPlugin*+ abgeleitet sein
+- alle Filter-Plugins müssen von der Klasse +kieker.analysis.plugin.filter.*AbstractFilterPlugin*+ abgeleitet sein
+- alle Filter-Plugins müssen mindestens eine Input-Methode haben, die mit der Annotation [gray]+@InputPort+ gekennzeichnet ist
+- alle Properties eines Plugins sollten immer über ein Objekt der Klasse +kieker.common.configuration.*Configuration*+ gesetzt werden
+- alle Properties eines Plugins sollten immer mit der Methode +getCurrentConfiguration()+ in einem Objekt der Klasse +kieker.common.configuration.*Configuration*+ zurückgegeben werden
+
+Eine ausführliche Anleitung zum Schreiben von Reader- und Filter-Plugins findet sich im Kapitel ``4.2 Developing Analysis Plugins and Repositories'' im http://kieker-monitoring.net/documentation/[Kieker-User-Guide].
+
+[[X26]]
+Stand-Alone-Analyse mit dem ``kax-run''-Skript
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Die in der Kieker-WebGUI erstellten Plugin-Netzwerke werden in +.kax+-Dateien gespeichert (abgelegt im Verzeichnis `kieker-webgui-1.9_binaries\bin\data\`+*<Dein_Projekt>*+). Es ist möglich
+diese ohne die WebGUI zu starten. Dies macht natürlich nur Sinn, wenn die Ausgabe nicht auf Visualisierung innerhalb der WebGUI basiert. So z.B.
+beim +org.oasp.module.monitoring.analysis.*JMXDataProviderFilter*+. Hierzu wird allerdings ein Skript aus dem http://kieker-monitoring.net/download/[Kieker-Release] benötigt.
+Einmal heruntergeladen und entpackt, findest du es unter `kieker-1.9\bin\`*+kax-run.bat*+. Nun kannst Du mit folgendem Befehl dein +.kax+-File starten:
+*********************
++kax-run.bat -i <Pfad zu Deinem .kax-File>+
+*********************
+IMPORTANT: Die Datei +performance-monitoring-1.0.jar+ sowie alle +.jar+-Dateien, die etwaige verwendete Klassen enthalten, müssen dem Verzeichnis +kieker-1.9\lib+ hinzugefügt werden.
+
+Nützliche Links und Literaturverweise
+-------------------------------------
+- http://kieker-monitoring.net/documentation/[Kieker User Guide] -- Kieker Project (Apr. 2014). Kieker 1.9 User Guide. Software Engineering Group, Kiel University, Kiel, Germany.
+- http://kieker-monitoring.net/api/1.9/[Kieker-Online-API]
+- http://kieker-monitoring.net/blog/everything-in-sight-kiekers-webgui-in-action/[Kieker Blog] -- gibt einen Überblick über die Kieker-WebGUI.
+- https://www.eclipse.org/aspectj/doc/next/progguide/language.html[AspectJ-Programmers-Guide] -- erklärt die Pointcut-Expression-Language, derer Spring-AOP sich bedient.
+- Stefan Eberlein. ``__Erhebung und Analyse von Kennzahlen aus dem fachlichen Performance-Monitoring__''. Dimplomarbeit. Friedrich-Alexander-Universität Erlangen-Nürnberg, 2011 -- Bietet einen umfangreichen Überblick über das Thema.
+- Johannes Mensing ``__Methodische Vorgaben für Performance-Monitoring im Kontext betrieblicher Java-Anwendungen__''. Bachelorarbeit. Hochschule RheinMain Wiesbaden, 2014 -- Im Rahmen der Bachelorarbeit entstand diese Anleitung.
+

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="
+    http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.5.xsd">
+
+  <aop:config proxy-target-class="true">
+     <aop:advisor order="0" advice-ref="contextProvider" pointcut="execution(public * com.capgemini.gastronomy.restaurant.gui..*.*Controller.*(..))" />
+     <aop:advisor order="1" advice-ref="monitoringProbe" pointcut="execution(public * com.capgemini.gastronomy.restaurant..*.*(..))" /> 
+  </aop:config>
+    
+  <bean id="monitoringProbe" class="org.oasp.module.monitoring.analysis.CustomOperationExecutionMethodInvocationInterceptor" />
+  <bean id="contextProvider" class="org.oasp.module.monitoring.analysis.ContextProvider" />
+</beans>
